@@ -1,16 +1,1 @@
-FINCAS 2.0 - PROTOTIPO DE PRUEBAS (NO PUBLICAR TODAVÍA)
-
-1. Haz una copia de seguridad de tu web y de los datos de Supabase.
-2. Sube los seis archivos (index.html, config.js, sw.js, manifest.webmanifest e iconos) a una rama o repositorio DE PRUEBAS con GitHub Pages. No sustituyas aún tu web pública.
-3. Abre la nueva URL con conexión a Internet, inicia sesión y comprueba que aparecen tus fincas.
-4. Prueba los desplegables de variedad, patrón y provincia. El municipio es un campo con sugerencias iniciales, NO un catálogo completo de España. Para abrir SIGPAC por parcela introduce manualmente el código municipal SIGPAC.
-5. Prueba el botón SIGPAC con coordenadas y la búsqueda por referencia.
-6. Prueba SIN Internet editando una finca sin fotos ni anotaciones. Verás el cambio local y se intentará enviar al recuperar conexión. NO uses datos importantes en estas pruebas: falta endurecer la sincronización y los conflictos.
-
-LÍMITES ACTUALES:
-- El almacenamiento offline es una prueba basada en localStorage; NO es todavía una solución robusta ni segura para varios usuarios. Fotos y anotaciones siguen requiriendo conexión.
-- El GPS abre el visor SIGPAC centrado en el punto, pero NO recupera automáticamente polígono/parcela. Esa consulta requiere integrar y probar GetFeatureInfo u OGC API.
-- Los municipios sugeridos son parciales; aún falta el catálogo nacional oficial con sus códigos.
-- No se ha validado la estructura SQL, políticas RLS, permisos de fotos ni ejecución real en móviles. No apta para venta.
-- La dependencia externa Supabase y jsPDF debe cargarse al menos una vez con Internet antes de funcionar en modo avión.
-- Nunca publiques la clave service_role de Supabase en config.js: debe ser la clave pública anon/publishable.
+Fincas 2.2: correcciones parciales. No usar con datos importantes. Código de municipio automático solo para catálogo parcial. SIGPAC abre búsqueda por referencia; GPS sin referencia solo centra el mapa. Los propietarios y nombres de fincas se sugieren desde los datos cargados. Subir archivos a raíz del repositorio de pruebas. Verificar que la base de datos tiene políticas RLS antes de publicar.

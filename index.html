@@ -57,6 +57,9 @@ const hasGeo=f=>f.lat!=null&&f.lng!=null;
 const mapsUrl=f=>`https://www.google.com/maps/search/?api=1&query=${f.lat},${f.lng}`;
 const satUrl=f=>`https://www.google.com/maps/@${f.lat},${f.lng},18z/data=!3m1!1e3`;
 const SIG='https://sigpac.mapa.gob.es/fega/visor/';
+// Códigos SIGPAC verificados para municipios iniciales. Catálogo completo pendiente.
+const MUNICIPIO_CODIGOS={'41':{'La Rinconada':'081','Sevilla':'091','Dos Hermanas':'038','Utrera':'095'}};
+const normaliza=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
 const VARIEDADES={Naranjas:['Navelina','Newhall','Washington Navel','Navelate','Lane Late','Powell Summer Navel','Barnfield','Chislett Summer Navel','Salustiana','Valencia Late','Valencia Midknight','Valencia Delta Seedless'],Mandarinas:['Oronules','Clemenules','Clemenvilla','Marisol','Orogrande','Orri','Tango','Nadorcott','Ortanique','Hernandina','Arrufatina']};
 const PATRONES=['Carrizo','Troyer','Citrus macrophylla','Cleopatra','Forner-Alcaide nº 5','Forner-Alcaide nº 13','Forner-Alcaide nº 517','C-35','Citrumelo Swingle','Poncirus trifoliata','Volkameriana','Naranjo amargo'];
 const PROVINCIAS=[['01','Álava'],['02','Albacete'],['03','Alicante'],['04','Almería'],['05','Ávila'],['06','Badajoz'],['07','Illes Balears'],['08','Barcelona'],['09','Burgos'],['10','Cáceres'],['11','Cádiz'],['12','Castellón'],['13','Ciudad Real'],['14','Córdoba'],['15','A Coruña'],['16','Cuenca'],['17','Girona'],['18','Granada'],['19','Guadalajara'],['20','Gipuzkoa'],['21','Huelva'],['22','Huesca'],['23','Jaén'],['24','León'],['25','Lleida'],['26','La Rioja'],['27','Lugo'],['28','Madrid'],['29','Málaga'],['30','Murcia'],['31','Navarra'],['32','Ourense'],['33','Asturias'],['34','Palencia'],['35','Las Palmas'],['36','Pontevedra'],['37','Salamanca'],['38','Santa Cruz de Tenerife'],['39','Cantabria'],['40','Segovia'],['41','Sevilla'],['42','Soria'],['43','Tarragona'],['44','Teruel'],['45','Toledo'],['46','Valencia'],['47','Valladolid'],['48','Bizkaia'],['49','Zamora'],['50','Zaragoza'],['51','Ceuta'],['52','Melilla']];
@@ -66,7 +69,7 @@ const MUNICIPIOS_BASE={'41':['La Rinconada','Sevilla','Dos Hermanas','Alcalá de
 const option=(v,t,selected)=>`<option value="${esc(v)}" ${String(v)===String(selected??'')?'selected':''}>${esc(t)}</option>`;
 const selectOrOther=(id,values,selected,placeholder)=>`<select id="${id}">${option('',placeholder,selected)}${[...new Set([...values,...(selected?[selected]:[])])].map(v=>option(v,v,selected)).join('')}${option('__otro__','Otra / escribir manualmente…','')}</select><input id="${id}_otro" style="display:none;margin-top:6px" placeholder="Escribe el valor">`;
 function setupOther(id){const el=$('#'+id),other=$('#'+id+'_otro');el.onchange=()=>{other.style.display=el.value==='__otro__'?'block':'none'};return()=>el.value==='__otro__'?other.value.trim():el.value}
-function sigUrl(f){const base=new URL(SIG);if(f.prov_cod&&f.mun_cod&&f.poligono&&f.parcela){Object.entries({provincia:f.prov_cod,municipio:f.mun_cod,agregado:0,zona:0,poligono:f.poligono,parcela:f.parcela}).forEach(([k,v])=>base.searchParams.set(k,v));return base.href}if(hasGeo(f)){Object.entries({x:f.lng,y:f.lat,srid:4326,r:400}).forEach(([k,v])=>base.searchParams.set(k,v))}return base.href}
+function sigUrl(f){const base=new URL(SIG);if(f.prov_cod&&f.mun_cod&&f.poligono&&f.parcela){Object.entries({provincia:f.prov_cod,municipio:f.mun_cod,agregado:0,zona:0,poligono:f.poligono,parcela:f.parcela,recinto:f.recinto||0}).forEach(([k,v])=>base.searchParams.set(k,v));return base.href}if(hasGeo(f)){Object.entries({x:f.lng,y:f.lat,srid:4326,r:400}).forEach(([k,v])=>base.searchParams.set(k,v))}return base.href}
 const CACHE_KEY='fincas2_cache_v1',QUEUE_KEY='fincas2_queue_v1';
 const getStored=k=>{try{return JSON.parse(localStorage.getItem(k)||'[]')}catch{return []}};
 const setStored=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch{toast('Almacenamiento local lleno: exporta una copia.');return false}};
@@ -156,7 +159,7 @@ function form(app){
   const F=(k,l,t='text',ex='')=>`<label>${l}</label><input id="f_${k}" type="${t}" ${ex} value="${esc(f[k])}">`;
   const D='step="any" inputmode="decimal"';
   app.innerHTML=`<div class="card"><h2 style="margin:0">${f.id?'Editar finca':'Nueva finca'}</h2>
-  <div class="section-title">🌿 Datos del cultivo</div>${F('finca','Finca')}${F('propietarios','Propietarios')}
+  <div class="section-title">🌿 Datos del cultivo</div><label>Seleccionar finca existente (opcional)</label><select id="f_existente"><option value="">➕ Nueva finca / mantener edición actual</option>${[...fincas].sort((a,b)=>(a.finca||'').localeCompare(b.finca||'')).map(x=>`<option value="${esc(x.id)}" ${x.id===f.id?'selected':''}>${esc(x.finca)} — ${esc(x.municipio||'Sin municipio')}</option>`).join('')}</select><p class="helper">Al seleccionar una finca existente se abre su ficha para evitar duplicados.</p>${F('finca','Finca')}<datalist id="fincas_sugeridas">${uniq('finca').map(x=>`<option value="${esc(x)}"></option>`).join('')}</datalist>${F('propietarios','Propietarios')}<datalist id="propietarios_sugeridos">${uniq('propietarios').map(x=>`<option value="${esc(x)}"></option>`).join('')}</datalist>
   <label>Tipo de cítrico</label><select id="f_tipo">${option('Naranjas','Naranjas',f.tipo||'Naranjas')}${option('Mandarinas','Mandarinas',f.tipo)}</select>
   <label>Variedad</label><div id="variedad_box"></div>
   <label>Patrón</label>${selectOrOther('f_patron',PATRONES,f.patron,'Seleccionar patrón')}
@@ -166,24 +169,28 @@ function form(app){
   <div class="section-title">📍 Ubicación y SIGPAC</div>
   <label>Provincia</label><select id="f_prov_cod"><option value="">Seleccionar provincia</option><optgroup label="Andalucía">${PROVINCIAS.filter(x=>ANDALUCIA.has(x[0])).map(x=>option(x[0],x[1],f.prov_cod)).join('')}</optgroup><optgroup label="Resto de España">${PROVINCIAS.filter(x=>!ANDALUCIA.has(x[0])).map(x=>option(x[0],x[1],f.prov_cod)).join('')}</optgroup></select>
   <label>Municipio (sugerencias según provincia)</label><input id="f_municipio" list="municipios_lista" value="${esc(f.municipio)}" placeholder="Selecciona o escribe municipio"><datalist id="municipios_lista"></datalist>
-  <label>Código municipal SIGPAC (3 cifras)</label><input id="f_mun_cod" inputmode="numeric" maxlength="3" placeholder="Ej. 081" value="${esc(f.mun_cod)}"><p class="helper">Para buscar una parcela por referencia, indica el código municipal SIGPAC. La lista inicial de municipios es parcial; puedes escribir cualquiera.</p>
-  <div class="row"><div>${F('poligono','Polígono')}</div><div>${F('parcela','Parcela')}</div></div>
+  <label>Código municipal SIGPAC (3 cifras)</label><input id="f_mun_cod" inputmode="numeric" maxlength="3" placeholder="Ej. 081" value="${esc(f.mun_cod)}"><p class="helper" id="municipio_aviso">Los códigos se completan para los municipios incluidos en el catálogo verificado; otros requieren introducirlos manualmente.</p>
+  <div class="row"><div>${F('poligono','Polígono')}</div><div>${F('parcela','Parcela')}</div></div><label>Recinto SIGPAC (opcional)</label><input id="f_recinto" inputmode="numeric" value="${esc(f.recinto||'')}">
   <div class="row"><div>${F('lat','Latitud','text','inputmode="decimal"')}</div><div>${F('lng','Longitud','text','inputmode="decimal"')}</div></div>
   <div class="row" style="margin-top:8px"><button class="s" id="gps">📍 Usar mi ubicación</button><a class="btn s" href="https://www.google.com/maps" target="_blank" rel="noopener">Abrir Google Maps</a></div>
   <div class="row" style="margin-top:8px"><input id="pg" placeholder="…o pega enlace o coordenadas de Maps"><button class="s" id="pgb" style="flex:0 0 auto">Aplicar</button></div>
   <div class="row" style="margin-top:8px"><button class="s" type="button" id="sigref">🗺️ Buscar parcela SIGPAC</button><button class="s" type="button" id="siggps">📍 Ver GPS en SIGPAC</button></div>
-  <p class="helper">El visor oficial se abre con la referencia o las coordenadas. La identificación automática de polígono y parcela a partir del GPS queda pendiente de integrar y verificar.</p>
+  <p class="helper">Buscar por referencia utiliza provincia, municipio, polígono y parcela. GPS solo centra el mapa: no identifica automáticamente la parcela ni la selecciona. Para localizar una parcela concreta utiliza «Buscar parcela SIGPAC».</p>
   ${f.id?'':'<label>Primera anotación (opcional)</label><textarea id="f_nota" rows="3"></textarea>'+pickerHtml()}
   <div class="row" style="margin-top:14px"><button class="s" id="cn">Cancelar</button><button id="ok">Guardar</button></div></div>`;
   let readPatron=setupOther('f_patron'),readVariedad=()=>'';
   const refreshVariedad=()=>{$('#variedad_box').innerHTML=selectOrOther('f_variedad',VARIEDADES[$('#f_tipo').value],f.variedad,'Seleccionar variedad');readVariedad=setupOther('f_variedad')};
   refreshVariedad();$('#f_tipo').onchange=()=>{f.variedad='';refreshVariedad()};
+  $('#f_existente').onchange=e=>{if(!e.target.value)return;cur=e.target.value;draft=fincas.find(x=>x.id===cur);view='form';render()};
+  const autoCodigoMunicipio=()=>{const provincia=$('#f_prov_cod').value;const nombre=normaliza($('#f_municipio').value);const entry=Object.entries(MUNICIPIO_CODIGOS[provincia]||{}).find(([n])=>normaliza(n)===nombre);if(entry){$('#f_mun_cod').value=entry[1];$('#municipio_aviso').textContent='✓ Código SIGPAC completado automáticamente'}else{$('#f_mun_cod').value='';$('#municipio_aviso').textContent='Municipio sin código en el catálogo de pruebas: introduce su código SIGPAC manualmente.'}};
+  $('#f_finca').setAttribute('list','fincas_sugeridas');$('#f_propietarios').setAttribute('list','propietarios_sugeridos');
+  $('#f_municipio').addEventListener('input',autoCodigoMunicipio);$('#f_municipio').addEventListener('change',autoCodigoMunicipio);
   const refreshMunicipios=()=>{$('#municipios_lista').innerHTML=(MUNICIPIOS_BASE[$('#f_prov_cod').value]||[]).map(x=>`<option value="${esc(x)}"></option>`).join('')};refreshMunicipios();
   $('#f_prov_cod').onchange=()=>{$('#f_municipio').value='';$('#f_mun_cod').value='';refreshMunicipios()};
-  const keys=['finca','propietarios','superficie','marco_a','marco_b','municipio','poligono','parcela','lat','lng'];
+  const keys=['finca','propietarios','recinto','superficie','marco_a','marco_b','municipio','poligono','parcela','lat','lng'];
   const read=()=>{keys.forEach(k=>f[k]=$('#f_'+k).value.trim());f.variedad=readVariedad();f.patron=readPatron();f.tipo=$('#f_tipo').value;f.prov_cod=$('#f_prov_cod').value||null;f.mun_cod=$('#f_mun_cod').value.trim()||null};
-  $('#sigref').onclick=()=>{read();if(!f.prov_cod||!f.mun_cod||!f.poligono||!f.parcela)return toast('Indica provincia, código municipal, polígono y parcela.');window.open(sigUrl(f),'_blank','noopener')};
-  $('#siggps').onclick=()=>{read();if(!hasGeo(f))return toast('Primero introduce coordenadas o usa GPS.');const u=new URL(SIG);Object.entries({x:f.lng,y:f.lat,srid:4326,r:400}).forEach(([k,v])=>u.searchParams.set(k,v));window.open(u.href,'_blank','noopener')};
+  $('#sigref').onclick=()=>{read();if(!f.prov_cod||!f.mun_cod||!f.poligono||!f.parcela)return toast('Faltan provincia, código municipal, polígono o parcela.');const u=sigUrl(f);window.location.href=u};
+  $('#siggps').onclick=()=>{read();if(!hasGeo(f))return toast('Primero introduce coordenadas o usa GPS.');if(f.prov_cod&&f.mun_cod&&f.poligono&&f.parcela){window.location.href=sigUrl(f);return}const u=new URL(SIG);Object.entries({x:f.lng,y:f.lat,srid:4326,r:400}).forEach(([k,v])=>u.searchParams.set(k,v));window.location.href=u.href};
   ['superficie','marco_a','marco_b'].forEach(k=>$('#f_'+k).oninput=()=>{read();$('#arbs').value=arb(f)});
   $('#gps').onclick=()=>{if(!navigator.geolocation)return toast('Este dispositivo no tiene geolocalización.');toast('Buscando tu posición…');
     navigator.geolocation.getCurrentPosition(p=>{$('#f_lat').value=p.coords.latitude.toFixed(6);$('#f_lng').value=p.coords.longitude.toFixed(6);toast('Posición guardada (precisión ±'+Math.round(p.coords.accuracy)+' m).')},
