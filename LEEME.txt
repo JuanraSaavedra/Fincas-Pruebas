@@ -1,12 +1,22 @@
-FINCAS 2.7 (modo noche corregido; resto igual que 2.6)
+FINCAS 2.8 - pestaña Madurez
 
-ANTES DE USARLA: en Supabase -> SQL Editor, ejecutar una sola vez:
-  alter table public.fincas add column if not exists parcelas jsonb not null default '[]'::jsonb;
+ANTES DE USARLA, en Supabase -> SQL Editor -> New query -> Run (una sola vez):
 
-Novedades:
-- Varias parcelas por finca (mismo o distinto municipio / polígono). Cada parcela: provincia, municipio, polígono, parcela, recinto, superficie y coordenadas.
-- Al elegir una parcela en el mapa se rellena también su superficie (la del recinto SIGPAC tocado).
-- La superficie de la finca es la suma de las parcelas; si no se indica superficie en las parcelas, se puede escribir a mano.
-- Todo sigue pudiéndose escribir a mano.
-- Las fincas antiguas se convierten solas en una parcela al editarlas.
-- Lista, filtros, PDF, CSV y mapa de fincas tienen en cuenta todas las parcelas.
+create table if not exists public.madurez (
+  id uuid primary key default gen_random_uuid(),
+  finca_id uuid references public.fincas(id) on delete cascade,
+  fecha date not null default current_date,
+  variedad text,
+  brix numeric,
+  sosa_ml numeric,
+  peso_muestra numeric,
+  peso_zumo numeric,
+  calibres text,
+  creado timestamptz not null default now()
+);
+alter table public.madurez enable row level security;
+drop policy if exists "madurez autenticados" on public.madurez;
+create policy "madurez autenticados" on public.madurez for all to authenticated using (true) with check (true);
+notify pgrst, 'reload schema';
+
+Formulas: % zumo = peso zumo / peso muestra x 100 ; acidez = ml sosa x 0,128 ; I.M. = brix / acidez
