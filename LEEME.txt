@@ -1,9 +1,12 @@
-FINCAS 2.5
+FINCAS 2.6
+
+ANTES DE USARLA: en Supabase -> SQL Editor, ejecutar una sola vez:
+  alter table public.fincas add column if not exists parcelas jsonb not null default '[]'::jsonb;
 
 Novedades:
-- "Elegir parcela en el mapa": mapa satélite dentro de la app con los recintos SIGPAC oficiales. Se abre en tu ubicación; al tocar una parcela se rellenan provincia, municipio, polígono, parcela, recinto y coordenadas (consulta oficial del FEGA).
-- Eliminados los botones "Buscar parcela SIGPAC" y "Ver GPS en SIGPAC".
-- "Mapa" en la lista: todas las fincas (respetando filtros) con chincheta y nombre. También en cada ficha.
-- Google Maps desde la ficha abre la chincheta con el nombre de la finca.
-
-Para actualizar: sube estos archivos a GitHub sustituyendo los anteriores (todos en la raíz del repositorio).
+- Varias parcelas por finca (mismo o distinto municipio / polígono). Cada parcela: provincia, municipio, polígono, parcela, recinto, superficie y coordenadas.
+- Al elegir una parcela en el mapa se rellena también su superficie (la del recinto SIGPAC tocado).
+- La superficie de la finca es la suma de las parcelas; si no se indica superficie en las parcelas, se puede escribir a mano.
+- Todo sigue pudiéndose escribir a mano.
+- Las fincas antiguas se convierten solas en una parcela al editarlas.
+- Lista, filtros, PDF, CSV y mapa de fincas tienen en cuenta todas las parcelas.

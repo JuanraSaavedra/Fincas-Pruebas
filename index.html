@@ -69,6 +69,8 @@ const num=v=>{v=String(v??'').replace(',','.').trim();return v===''||isNaN(v)?nu
 const arb=f=>{const a=+f.marco_a,b=+f.marco_b,s=+f.superficie;return a>0&&b>0&&s>0?Math.round(10000/(a*b)*s):0};
 const hasGeo=f=>f.lat!=null&&f.lng!=null;
 const mapsUrl=f=>`https://www.google.com/maps?q=${f.lat},${f.lng}(${encodeURIComponent(String(f.finca||'Finca').replace(/[()]/g,' '))})&z=18`;
+const parcelasDe=f=>{if(Array.isArray(f.parcelas)&&f.parcelas.length)return f.parcelas;return(f.poligono||f.parcela||f.municipio||hasGeo(f))?[{prov_cod:f.prov_cod,mun_cod:f.mun_cod,municipio:f.municipio,poligono:f.poligono,parcela:f.parcela,recinto:f.recinto,superficie:f.superficie,lat:f.lat,lng:f.lng}]:[]};
+const munis=f=>{const a=[...new Set(parcelasDe(f).map(p=>(p.municipio||'').trim()).filter(Boolean))];return a.length?a:(f.municipio?[f.municipio]:[])};
 const satUrl=f=>`https://www.google.com/maps/@${f.lat},${f.lng},18z/data=!3m1!1e3`;
 const SIG='https://sigpac.mapa.gob.es/fega/visor/';
 // Catálogo municipal basado en la relación de municipios y códigos INE; se descarga una vez y queda en caché para uso sin conexión.
@@ -147,17 +149,20 @@ function abrirMapa(o){
         const r=d[0],prov=String(r.provincia).padStart(2,'0'),mun=String(r.municipio).padStart(3,'0');
         await cargarCatalogoMunicipios();const mn=nombreMun(prov,mun);
         const rings=wktRings(r.wkt);if(rings.length){poly=L.polygon(rings,{color:'#ffeb3b',weight:3,fillColor:'#ffeb3b',fillOpacity:.15}).addTo(map)}
-        const P={prov,mun,munNombre:mn,poligono:r.poligono,parcela:r.parcela,recinto:r.recinto,lat,lng};
+        const P={prov,mun,munNombre:mn,poligono:r.poligono,parcela:r.parcela,recinto:r.recinto,superficie:r.superficie,lat,lng};
         panel(`<b>Pol. ${esc(r.poligono)} · Parc. ${esc(r.parcela)} · Rec. ${esc(r.recinto)}</b><div class="mu">${esc(nombreProv(prov))} · ${esc(mn||('municipio '+mun))} · ${esc(r.superficie)} ha · uso ${esc(r.uso_sigpac||'—')}</div>${d.length>1?'<div class="mu">Hay '+d.length+' recintos en ese punto; se usa el primero.</div>':''}<div class="row"><button class="s" id="mno">Cancelar</button><button id="mok">✔ Usar esta parcela</button></div>`);
         $('#mno').onclick=()=>panel('<span class="mu">Toca otra parcela en el mapa.</span>');
         $('#mok').onclick=()=>{cerrar();o.onPick(P)};
       }catch(err){if(id===n)panel('<b>No se pudo consultar SIGPAC</b><div class="mu">Comprueba la conexión e inténtalo de nuevo ('+esc(err.message||err)+').</div>')}
     });
   }else{
-    const pts=[],fs=(o.fincas||[]).filter(hasGeo);
-    fs.forEach(f=>{const ll=[+f.lat,+f.lng];pts.push(ll);
-      const m=L.marker(ll,{icon:L.divIcon({className:'pin',html:`<span class="pinx">📍</span><span class="pint">${esc(f.finca)}</span>`,iconSize:[0,0],iconAnchor:[0,0]})}).addTo(map);
-      m.on('click',()=>{panel(`<b>${esc(f.finca)}</b><div class="mu">${esc([f.variedad,f.municipio,(f.superficie||0)+' ha'].filter(Boolean).join(' · '))}</div><div class="row w"><button id="mfi">Abrir ficha</button><a class="btn s" target="_blank" rel="noopener" href="${mapsUrl(f)}">Google Maps</a></div>`);
+    const pts=[],items=[];
+    (o.fincas||[]).forEach(f=>{const all=parcelasDe(f),conGeo=all.filter(p=>num(p.lat)!=null&&num(p.lng)!=null);
+      if(conGeo.length)conGeo.forEach(p=>items.push({f,p,ll:[+p.lat,+p.lng],lab:f.finca+(all.length>1?' · '+(p.poligono||'?')+'/'+(p.parcela||'?'):'')}));
+      else if(hasGeo(f))items.push({f,p:null,ll:[+f.lat,+f.lng],lab:f.finca})});
+    items.forEach(it=>{const {f,p,ll,lab}=it;pts.push(ll);
+      const m=L.marker(ll,{icon:L.divIcon({className:'pin',html:`<span class="pinx">📍</span><span class="pint">${esc(lab)}</span>`,iconSize:[0,0],iconAnchor:[0,0]})}).addTo(map);
+      m.on('click',()=>{panel(`<b>${esc(lab)}</b><div class="mu">${esc([f.variedad,p&&p.municipio?p.municipio:f.municipio,(p&&num(p.superficie)?p.superficie:(f.superficie||0))+' ha'].filter(Boolean).join(' · '))}</div><div class="row w"><button id="mfi">Abrir ficha</button><a class="btn s" target="_blank" rel="noopener" href="${mapsUrl({...f,lat:ll[0],lng:ll[1]})}">Google Maps</a></div>`);
         $('#mfi').onclick=()=>{cerrar();cur=f.id;view='detail';render()}})});
     if(!pts.length){toast('Ninguna finca tiene coordenadas todavía.');ubicar(true)}
     else if(pts.length===1){map.setView(pts[0],17);ubicar(false)}
@@ -176,7 +181,7 @@ async function syncPending(){if(syncing||!navigator.onLine||!pendingSync.length)
 const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',6000)};
 const lastVisit=f=>{const n=[...(f.anotaciones||[])].sort((a,b)=>a.fecha<b.fecha?1:-1);return n.length?n[0].fecha:null};
 const uniq=k=>[...new Set(fincas.map(f=>(f[k]||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-function filtered(){const t=q.toLowerCase();return fincas.filter(f=>(!fv||f.variedad===fv)&&(!fm||f.municipio===fm)&&[f.finca,f.propietarios,f.variedad,f.patron,f.municipio,f.poligono,f.parcela].join(' ').toLowerCase().includes(t)).sort((a,b)=>(a.finca||'').localeCompare(b.finca||''))}
+function filtered(){const t=q.toLowerCase();return fincas.filter(f=>(!fv||f.variedad===fv)&&(!fm||munis(f).includes(fm))&&[f.finca,f.propietarios,f.variedad,f.patron,munis(f).join(' '),parcelasDe(f).map(p=>(p.poligono||'')+' '+(p.parcela||'')).join(' ')].join(' ').toLowerCase().includes(t)).sort((a,b)=>(a.finca||'').localeCompare(b.finca||''))}
 // ---------- sesión y datos ----------
 async function load(){const {data,error}=await sb.from('fincas').select('*, anotaciones(id,fecha,texto,fotos)').order('finca');if(error){fincas=getStored(CACHE_KEY);toast('Sin conexión con el servidor: mostrando copia local.');return}fincas=data||[];for(const item of pendingSync){const i=fincas.findIndex(f=>f.id===item.id);const row={...(i>=0?fincas[i]:{}),...item.row,id:item.id,_pending:true};if(i>=0)fincas[i]=row;else fincas.push(row)}setStored(CACHE_KEY,fincas)}
 (async()=>{const {data}=await sb.auth.getSession();if(data.session){await load();view='list'}render();status();if(data.session)syncPending();
@@ -203,7 +208,7 @@ function login(app){
   const go=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
   $('#go').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};
 }
-function filtersHtml(){const vs=uniq('variedad'),ms=uniq('municipio');if(fv&&!vs.includes(fv))fv='';if(fm&&!ms.includes(fm))fm='';
+function filtersHtml(){const vs=uniq('variedad'),ms=[...new Set(fincas.flatMap(munis))].sort((a,b)=>a.localeCompare(b));if(fv&&!vs.includes(fv))fv='';if(fm&&!ms.includes(fm))fm='';
   const o=(a,v)=>'<option value="">Todas</option>'+a.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('');
   return`<div class="row"><div><label>Variedad</label><select id="fv">${o(vs,fv)}</select></div><div><label>Municipio</label><select id="fm">${o(ms,fm)}</select></div></div>`}
 function list(app){
@@ -212,7 +217,7 @@ function list(app){
   <p class="mu">${pendingSync.length?'⏳ '+pendingSync.length+' cambios por sincronizar · ':''}${rows.length} fincas · ${tot.toFixed(2)} ha · ${ta.toLocaleString('es-ES')} árboles</p>
   <div class="row"><button class="s" id="mapall">🗺️ Mapa</button><button class="s" id="pdf">📄 PDF</button><button class="s" id="csv">CSV</button></div><p class="mu" style="margin:4px 0 0">PDF y CSV incluyen solo las fincas filtradas.</p>`+
   (rows.map(f=>{const lv=lastVisit(f);return`<div class="card item" data-id="${f.id}"><b>${esc(f.finca)}</b><div class="mu">${esc(f.propietarios)}</div>
-   <span class="tag">${esc(f.variedad||'—')}</span>${f.patron?`<span class="tag">Patrón: ${esc(f.patron)}</span>`:''}<span class="tag">${f.superficie||0} ha</span><span class="tag">${arb(f).toLocaleString('es-ES')} árboles</span><span class="tag">${esc(f.municipio||'')}</span>
+   <span class="tag">${esc(f.variedad||'—')}</span>${f.patron?`<span class="tag">Patrón: ${esc(f.patron)}</span>`:''}<span class="tag">${f.superficie||0} ha</span><span class="tag">${arb(f).toLocaleString('es-ES')} árboles</span><span class="tag">${esc(munis(f).join(', '))}</span>
    <div class="mu" style="margin-top:6px">Última visita: ${fmt(lv)}</div></div>`}).join('')||'<p class="mu">No hay fincas con esos criterios.</p>');
   $('#fv').onchange=e=>{fv=e.target.value;render()};$('#fm').onchange=e=>{fm=e.target.value;render()};
   $('#q').oninput=e=>{q=e.target.value;const p=e.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(p,p)};
@@ -227,8 +232,8 @@ function detail(app){
   <div><span>Propietarios</span>${esc(f.propietarios)||'—'}</div><div><span>Variedad</span>${esc(f.variedad)||'—'}</div>
   <div><span>Patrón</span>${esc(f.patron)||'—'}</div><div><span>Superficie</span>${f.superficie||0} ha</div>
   <div><span>Marco plantación</span>${f.marco_a||'?'} × ${f.marco_b||'?'} m</div><div><span>Árboles</span>${arb(f).toLocaleString('es-ES')}</div>
-  <div><span>Término municipal</span>${esc(f.municipio)||'—'}${f.prov_cod?' ('+esc(nombreProv(f.prov_cod))+')':''}</div><div><span>Polígono / Parcela</span>${esc(f.poligono)||'—'} / ${esc(f.parcela)||'—'}${f.recinto?' / '+esc(f.recinto):''}</div>
-  <div style="grid-column:1/3"><span>Geolocalización</span>${hasGeo(f)?f.lat+', '+f.lng:'—'}</div></div>
+  <div style="grid-column:1/3"><span>Término municipal</span>${esc(munis(f).join(', '))||'—'}</div></div>
+  ${parcelasDe(f).length?`<div style="margin-top:10px"><span class="mu">Parcelas (${parcelasDe(f).length}) · total ${(+f.superficie||0).toLocaleString('es-ES',{maximumFractionDigits:4})} ha</span>${parcelasDe(f).map((p,i)=>`<div class="note"><b>${i+1}.</b> Pol. ${esc(p.poligono||'—')} · Parc. ${esc(p.parcela||'—')}${p.recinto?' · Rec. '+esc(p.recinto):''}${num(p.superficie)?' · <b>'+esc(p.superficie)+' ha</b>':''}<div class="mu">${esc(p.municipio||'—')}${p.prov_cod?' ('+esc(nombreProv(p.prov_cod))+')':''}${num(p.lat)!=null?' · '+esc(p.lat)+', '+esc(p.lng):''}${p.prov_cod&&p.mun_cod&&p.poligono&&p.parcela?` · <a href="${sigUrl(p)}" target="_blank" rel="noopener">SIGPAC</a>`:''}</div></div>`).join('')}</div>`:''}
   <div class="row w" style="margin-top:12px">${hasGeo(f)?`<button class="s" id="vmap">📍 Mapa</button><a class="btn s" href="${mapsUrl(f)}" target="_blank" rel="noopener">Google Maps</a><a class="btn s" href="${satUrl(f)}" target="_blank" rel="noopener">🛰️ Satélite</a>`:''}<a class="btn s" href="${sigUrl(f)}" target="_blank" rel="noopener">🗺️ SIGPAC</a><button class="s" id="ed">✏️ Editar</button></div></div>
   <div class="card"><b>Anotaciones</b><textarea id="nt" rows="3" placeholder="Nueva anotación (se guarda con fecha y hora)…" style="margin-top:8px"></textarea>${pickerHtml()}<button id="add" style="margin-top:8px;width:100%">Añadir anotación</button>
   ${notas.map(n=>`<div class="note"><small>📅 ${fmt(n.fecha)}</small><div>${esc(n.texto).replace(/\n/g,'<br>')}</div>${(n.fotos||[]).length?'<div class="ph">'+n.fotos.map(p=>`<img data-p="${esc(p)}" src="${urlCache[p]||''}">`).join('')+'</div>':''}</div>`).join('')||'<p class="mu">Sin anotaciones.</p>'}</div>
@@ -257,18 +262,14 @@ function form(app){
   <label>Tipo de cítrico</label><select id="f_tipo">${option('Naranjas','Naranjas',f.tipo||'Naranjas')}${option('Mandarinas','Mandarinas',f.tipo)}</select>
   <label>Variedad</label><div id="variedad_box"></div>
   <label>Patrón</label>${selectOrOther('f_patron',PATRONES,f.patron,'Seleccionar patrón')}
-  ${F('superficie','Superficie (ha)','number',D)}
+  ${F('superficie','Superficie total (ha)','number',D)}<p class="helper" id="sup_aviso"></p>
   <div class="row"><div>${F('marco_a','Marco plantación (m)','number',D)}</div><div>${F('marco_b','× (m)','number',D)}</div></div>
   <label>Árboles (calculado: 10.000 / (marco A × B) × superficie)</label><input id="arbs" readonly value="${arb(f)}">
-  <div class="section-title">📍 Ubicación y SIGPAC</div>
-  <button type="button" id="elegirmapa" style="width:100%">🗺️ Elegir parcela en el mapa</button><p class="helper">Se abre el mapa en tu ubicación. Toca tu parcela y se rellenan provincia, municipio, polígono, parcela, recinto y coordenadas.</p>
-  <label>Provincia</label><select id="f_prov_cod"><option value="">Seleccionar provincia</option><optgroup label="Andalucía">${PROVINCIAS.filter(x=>ANDALUCIA.has(x[0])).map(x=>option(x[0],x[1],f.prov_cod)).join('')}</optgroup><optgroup label="Resto de España">${PROVINCIAS.filter(x=>!ANDALUCIA.has(x[0])).map(x=>option(x[0],x[1],f.prov_cod)).join('')}</optgroup></select>
-  <label>Municipio (selecciona de la lista)</label><select id="f_municipio"><option value="">Selecciona primero la provincia</option>${f.municipio?option(f.municipio,f.municipio,f.municipio):""}</select>
-  <label>Código municipal (3 cifras)</label><input id="f_mun_cod" inputmode="numeric" maxlength="3" placeholder="Se completa al elegir municipio" value="${esc(f.mun_cod)}"><p class="helper" id="municipio_aviso">Elige la provincia y después el municipio. El código se rellena desde el catálogo INE; comprueba la referencia SIGPAC antes de guardar.</p>
-  <div class="row"><div>${F('poligono','Polígono')}</div><div>${F('parcela','Parcela')}</div></div><label>Recinto SIGPAC (opcional)</label><input id="f_recinto" inputmode="numeric" value="${esc(f.recinto||'')}">
-  <div class="row"><div>${F('lat','Latitud','text','inputmode="decimal"')}</div><div>${F('lng','Longitud','text','inputmode="decimal"')}</div></div>
-  <div class="row" style="margin-top:8px"><button class="s" id="gps">📍 Usar mi ubicación</button><a class="btn s" href="https://www.google.com/maps" target="_blank" rel="noopener">Abrir Google Maps</a></div>
-  <div class="row" style="margin-top:8px"><input id="pg" placeholder="…o pega enlace o coordenadas de Maps"><button class="s" id="pgb" style="flex:0 0 auto">Aplicar</button></div>
+  <div class="section-title">📍 Parcelas y SIGPAC</div>
+  <p class="helper">Una finca puede tener varias parcelas (con igual o distinto municipio y polígono). Usa «Mapa» para rellenar una parcela tocándola, o escribe los datos a mano.</p>
+  <div id="parcelas_box"></div>
+  <button type="button" class="s" id="addp" style="width:100%">➕ Añadir parcela</button>
+  <div id="tot" style="font-weight:700;margin:10px 0 0;color:var(--ac2)"></div>
   ${f.id?'':'<label>Primera anotación (opcional)</label><textarea id="f_nota" rows="3"></textarea>'+pickerHtml()}
   <div class="row" style="margin-top:14px"><button class="s" id="cn">Cancelar</button><button id="ok">Guardar</button></div></div>`;
   let readPatron=setupOther('f_patron'),readVariedad=()=>'';
@@ -277,35 +278,61 @@ function form(app){
   $('#f_existente').onchange=e=>{if(!e.target.value)return;cur=e.target.value;draft=fincas.find(x=>x.id===cur);view='form';render()};
   $('#f_finca').setAttribute('list','fincas_sugeridas');$('#f_propietarios').setAttribute('list','propietarios_sugeridos');
   $('#f_propietario_existente').onchange=e=>{if(e.target.value)$('#f_propietarios').value=e.target.value};
-  const autoCodigoMunicipio=()=>{const provincia=$('#f_prov_cod').value;const nombre=$('#f_municipio').value;const m=buscarMunicipio(provincia,nombre);if(m){$('#f_mun_cod').value=m.cmun;$('#municipio_aviso').textContent='✓ Código municipal completado desde el catálogo INE ('+m.municipio_id+'). Verifica que coincida con la referencia SIGPAC.'}else if(nombre){$('#municipio_aviso').textContent='No se encontró el municipio en el catálogo cargado. Comprueba provincia y nombre.'}else{$('#f_mun_cod').value='';$('#municipio_aviso').textContent='Elige un municipio para completar el código.'}};
-  const refreshMunicipios=()=>{const prov=$('#f_prov_cod').value;const sel=$('#f_municipio');const prev=sel.value||f.municipio||'';let arr=municipiosINE.filter(m=>m.provincia_id===prov).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));if(!arr.length)arr=(MUNICIPIOS_BASE[prov]||[]).map((nombre,i)=>({nombre,cmun:'',municipio_id:prov+String(i+1).padStart(3,'0')}));sel.innerHTML='<option value="">Selecciona municipio</option>'+arr.map(m=>option(m.nombre,m.nombre, nombreMunicipioClave(m.nombre)===nombreMunicipioClave(prev)?m.nombre:'')).join('');if(prev&&!arr.some(m=>nombreMunicipioClave(m.nombre)===nombreMunicipioClave(prev)))sel.insertAdjacentHTML('beforeend',option(prev,prev,prev));if(prev)sel.value=[...sel.options].find(o=>nombreMunicipioClave(o.value)===nombreMunicipioClave(prev))?.value||'';autoCodigoMunicipio()};
-  $('#f_municipio').onchange=autoCodigoMunicipio;
-  $('#f_prov_cod').onchange=()=>{$('#f_mun_cod').value='';refreshMunicipios()};
-  refreshMunicipios();cargarCatalogoMunicipios().then(()=>{if($('#f_prov_cod'))refreshMunicipios()});
-  const aplicarParcela=P=>{f.municipio=P.munNombre||'';$('#f_prov_cod').value=P.prov;$('#f_municipio').value='';refreshMunicipios();
-    $('#f_mun_cod').value=P.mun;$('#f_poligono').value=P.poligono;$('#f_parcela').value=P.parcela;$('#f_recinto').value=P.recinto;
-    $('#f_lat').value=P.lat.toFixed(6);$('#f_lng').value=P.lng.toFixed(6);
-    $('#municipio_aviso').textContent=P.munNombre?'✓ Datos tomados de SIGPAC (municipio '+P.mun+').':'Código de municipio '+P.mun+' no encontrado en el catálogo: elige el municipio de la lista.';
-    toast('Parcela aplicada: pol. '+P.poligono+', parc. '+P.parcela+', rec. '+P.recinto+'. Revisa y pulsa Guardar.')};
-  $('#elegirmapa').onclick=()=>{read();abrirMapa({modo:'elegir',titulo:'Toca tu parcela',lat:num(f.lat),lng:num(f.lng),onPick:aplicarParcela})};
-  const keys=['finca','propietarios','recinto','superficie','marco_a','marco_b','municipio','poligono','parcela','lat','lng'];
-  const read=()=>{keys.forEach(k=>f[k]=$('#f_'+k).value.trim());f.variedad=readVariedad();f.patron=readPatron();f.tipo=$('#f_tipo').value;f.prov_cod=$('#f_prov_cod').value||null;f.mun_cod=$('#f_mun_cod').value.trim()||null};
-  ['superficie','marco_a','marco_b'].forEach(k=>$('#f_'+k).oninput=()=>{read();$('#arbs').value=arb(f)});
-  $('#gps').onclick=()=>{if(!navigator.geolocation)return toast('Este dispositivo no tiene geolocalización.');toast('Buscando tu posición…');
-    navigator.geolocation.getCurrentPosition(p=>{$('#f_lat').value=p.coords.latitude.toFixed(6);$('#f_lng').value=p.coords.longitude.toFixed(6);toast('Posición guardada (precisión ±'+Math.round(p.coords.accuracy)+' m).')},
-      e=>toast('No se pudo obtener la ubicación: activa el permiso de ubicación del navegador y el GPS del móvil.'),{enableHighAccuracy:true,timeout:20000})};
-  $('#pgb').onclick=()=>{const g=parseGeo($('#pg').value);if(!g)return toast('No encuentro coordenadas en ese texto.');$('#f_lat').value=g[0];$('#f_lng').value=g[1]};
+  // ---- parcelas múltiples ----
+  const vacia=()=>({prov_cod:'',mun_cod:'',municipio:'',poligono:'',parcela:'',recinto:'',superficie:'',lat:'',lng:''});
+  let ps=parcelasDe(f).map(p=>({...vacia(),...Object.fromEntries(Object.entries(p).map(([k,v])=>[k,v??'']))}));
+  if(!ps.length)ps=[vacia()];
+  const provOpts=sel=>`<option value="">Provincia</option><optgroup label="Andalucía">${PROVINCIAS.filter(x=>ANDALUCIA.has(x[0])).map(x=>option(x[0],x[1],sel)).join('')}</optgroup><optgroup label="Resto de España">${PROVINCIAS.filter(x=>!ANDALUCIA.has(x[0])).map(x=>option(x[0],x[1],sel)).join('')}</optgroup>`;
+  const munOpts=(prov,sel)=>{let arr=municipiosINE.filter(m=>m.provincia_id===prov).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));if(!arr.length)arr=(MUNICIPIOS_BASE[prov]||[]).map(nombre=>({nombre,cmun:''}));
+    const k=nombreMunicipioClave(sel||'');let h='<option value="">Municipio</option>'+arr.map(m=>option(m.nombre,m.nombre,sel&&nombreMunicipioClave(m.nombre)===k?m.nombre:'')).join('');
+    if(sel&&!arr.some(m=>nombreMunicipioClave(m.nombre)===k))h+=option(sel,sel,sel);return h};
+  const card=(p,i)=>`<div class="card pc" data-i="${i}" style="margin:8px 0;padding:12px"><div class="row" style="align-items:center"><b>Parcela ${i+1}</b><button type="button" class="s pmap" style="flex:0 0 auto">🗺️ Mapa</button><button type="button" class="s pgps" style="flex:0 0 auto">📍 GPS</button>${ps.length>1?'<button type="button" class="d pdel" style="flex:0 0 auto">🗑</button>':''}</div>
+    <label>Provincia</label><select class="pv_prov">${provOpts(p.prov_cod)}</select>
+    <label>Municipio</label><select class="pv_mun">${munOpts(p.prov_cod,p.municipio)}</select>
+    <div class="row"><div><label>Cód. municipio</label><input class="pv_muncod" inputmode="numeric" maxlength="3" value="${esc(p.mun_cod)}"></div><div><label>Superficie (ha)</label><input class="pv_sup" inputmode="decimal" value="${esc(p.superficie)}"></div></div>
+    <div class="row"><div><label>Polígono</label><input class="pv_pol" inputmode="numeric" value="${esc(p.poligono)}"></div><div><label>Parcela</label><input class="pv_parcela" inputmode="numeric" value="${esc(p.parcela)}"></div><div><label>Recinto</label><input class="pv_rec" inputmode="numeric" value="${esc(p.recinto)}"></div></div>
+    <div class="row"><div><label>Latitud</label><input class="pv_lat" inputmode="decimal" value="${esc(p.lat)}"></div><div><label>Longitud</label><input class="pv_lng" inputmode="decimal" value="${esc(p.lng)}"></div></div></div>`;
+  const total=()=>ps.reduce((a,p)=>a+(num(p.superficie)||0),0);
+  const actualizarTotal=()=>{const t=total(),inp=$('#f_superficie'),n=ps.filter(p=>num(p.superficie)>0).length;
+    $('#tot').textContent=ps.length+(ps.length===1?' parcela':' parcelas')+' · Total: '+t.toLocaleString('es-ES',{maximumFractionDigits:4})+' ha';
+    if(t>0){inp.value=+t.toFixed(4);inp.readOnly=true;$('#sup_aviso').textContent='Suma de las superficies de '+n+(n===1?' parcela.':' parcelas.')}
+    else{inp.readOnly=false;$('#sup_aviso').textContent='Escríbela a mano, o indica la superficie en cada parcela y se sumará sola.'}
+    $('#arbs').value=arb({marco_a:num($('#f_marco_a').value),marco_b:num($('#f_marco_b').value),superficie:num(inp.value)})};
+  const box=$('#parcelas_box');
+  const draw=()=>{box.innerHTML=ps.map(card).join('');actualizarTotal()};
+  box.addEventListener('input',e=>{const c=e.target.closest('.pc');if(!c)return;const p=ps[+c.dataset.i];
+    const mp={pv_muncod:'mun_cod',pv_sup:'superficie',pv_pol:'poligono',pv_parcela:'parcela',pv_rec:'recinto',pv_lat:'lat',pv_lng:'lng'};
+    for(const k in mp)if(e.target.classList.contains(k))p[mp[k]]=e.target.value.trim();actualizarTotal()});
+  box.addEventListener('change',e=>{const c=e.target.closest('.pc');if(!c)return;const p=ps[+c.dataset.i];
+    if(e.target.classList.contains('pv_prov')){p.prov_cod=e.target.value;p.municipio='';p.mun_cod='';draw()}
+    else if(e.target.classList.contains('pv_mun')){p.municipio=e.target.value;const m=buscarMunicipio(p.prov_cod,p.municipio);if(m)p.mun_cod=String(m.cmun);draw()}});
+  box.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const c=b.closest('.pc'),i=+c.dataset.i,p=ps[i];
+    if(b.classList.contains('pdel')){ps.splice(i,1);draw()}
+    else if(b.classList.contains('pgps')){if(!navigator.geolocation)return toast('Este dispositivo no tiene geolocalización.');toast('Buscando tu posición…');
+      navigator.geolocation.getCurrentPosition(pos=>{p.lat=pos.coords.latitude.toFixed(6);p.lng=pos.coords.longitude.toFixed(6);draw();toast('Posición guardada (precisión ±'+Math.round(pos.coords.accuracy)+' m).')},()=>toast('No se pudo obtener la ubicación: activa el permiso de ubicación del navegador.'),{enableHighAccuracy:true,timeout:20000})}
+    else if(b.classList.contains('pmap')){abrirMapa({modo:'elegir',titulo:'Toca la parcela '+(i+1),lat:num(p.lat),lng:num(p.lng),onPick:P=>{
+      Object.assign(p,{prov_cod:P.prov,mun_cod:P.mun,municipio:P.munNombre||'',poligono:String(P.poligono),parcela:String(P.parcela),recinto:String(P.recinto),superficie:P.superficie!=null?String(+(+P.superficie).toFixed(4)):p.superficie,lat:P.lat.toFixed(6),lng:P.lng.toFixed(6)});
+      draw();toast('Parcela '+(i+1)+': pol. '+P.poligono+', parc. '+P.parcela+', rec. '+P.recinto+(P.superficie!=null?' · '+(+P.superficie).toFixed(4)+' ha':'')+(P.munNombre?'':' · elige el municipio de la lista')+'. Pulsa Guardar.')}})}});
+  $('#addp').onclick=()=>{const l=ps[ps.length-1]||{};ps.push({...vacia(),prov_cod:l.prov_cod||''});draw();const cs=box.querySelectorAll('.pc');cs[cs.length-1].scrollIntoView({behavior:'smooth',block:'center'})};
+  cargarCatalogoMunicipios().then(()=>{if($('#parcelas_box'))draw()});
+  const keys=['finca','propietarios','superficie','marco_a','marco_b'];
+  const read=()=>{keys.forEach(k=>f[k]=$('#f_'+k).value.trim());f.variedad=readVariedad();f.patron=readPatron();f.tipo=$('#f_tipo').value};
+  ['marco_a','marco_b','superficie'].forEach(k=>$('#f_'+k).oninput=()=>{read();actualizarTotal()});
+  draw();
   if(!f.id)bindPicker();
   $('#cn').onclick=()=>{view=f.id?'detail':'list';render()};
   $('#ok').onclick=async()=>{read();if(!f.finca)return toast('Pon un nombre a la finca.');const b=$('#ok');b.disabled=true;b.textContent='Guardando…';
-    const row={finca:f.finca,propietarios:f.propietarios,variedad:f.variedad,patron:f.patron,superficie:num(f.superficie),marco_a:num(f.marco_a),marco_b:num(f.marco_b),municipio:f.municipio,poligono:f.poligono,parcela:f.parcela,recinto:f.recinto||null,lat:num(f.lat),lng:num(f.lng),prov_cod:f.prov_cod??null,mun_cod:f.mun_cod??null};
+    const lp=ps.filter(p=>[p.poligono,p.parcela,p.recinto,p.municipio,p.prov_cod,p.superficie,p.lat,p.lng].some(v=>String(v??'').trim()!==''));
+    const p0=lp[0]||{},g=lp.find(p=>num(p.lat)!=null&&num(p.lng)!=null)||{};
+    const parcelas=lp.map(p=>({prov_cod:p.prov_cod||null,mun_cod:p.mun_cod||null,municipio:p.municipio||'',poligono:String(p.poligono||''),parcela:String(p.parcela||''),recinto:String(p.recinto||''),superficie:num(p.superficie),lat:num(p.lat),lng:num(p.lng)}));
+    const row={finca:f.finca,propietarios:f.propietarios,variedad:f.variedad,patron:f.patron,superficie:num(f.superficie),marco_a:num(f.marco_a),marco_b:num(f.marco_b),municipio:p0.municipio||'',poligono:String(p0.poligono||''),parcela:String(p0.parcela||''),recinto:p0.recinto?String(p0.recinto):null,lat:num(g.lat),lng:num(g.lng),prov_cod:p0.prov_cod||null,mun_cod:p0.mun_cod||null,parcelas};
     if(!navigator.onLine){if(pend.length||($('#f_nota')&&$('#f_nota').value.trim())){toast('Sin conexión: guarda primero la finca sin fotos ni anotación.');b.disabled=false;b.textContent='Guardar';return}const id=queueSave(f,row);if(id){cur=id;view='detail';render();toast('Guardada en este dispositivo. Se sincronizará al recuperar Internet.')}else{b.disabled=false;b.textContent='Guardar'}return}
     try{let id=f.id;
       if(id){const {error}=await sb.from('fincas').update(row).eq('id',id);if(error)throw error}
       else{const {data,error}=await sb.from('fincas').insert(row).select().single();if(error)throw error;id=data.id;
         const t=($('#f_nota')||{value:''}).value.trim();if(t||pend.length){const fotos=await uploadPhotos(id,pend);const r=await sb.from('anotaciones').insert({finca_id:id,texto:t,fotos});if(r.error)throw r.error;pend=[]}}
       await load();cur=id;view='detail';render()}
-    catch(e){toast('No se pudo guardar: '+(e.message||e));b.disabled=false;b.textContent='Guardar'}};
+    catch(e){toast(/parcelas/.test(e.message||'')?'Falta crear la columna «parcelas» en Supabase (ejecuta el SQL indicado).':'No se pudo guardar: '+(e.message||e));b.disabled=false;b.textContent='Guardar'}};
 }
 // ---------- exportar ----------
 const fname=e=>'fincas'+(fv?'_'+fv:'')+(fm?'_'+fm:'')+'.'+e;
@@ -313,12 +340,12 @@ function dl(name,blob){const a=document.createElement('a');a.href=URL.createObje
 function exportCsv(){const rows=filtered();if(!rows.length)return toast('No hay fincas con esos filtros.');
   const cols=['finca','propietarios','variedad','patron','superficie_ha','marco_a','marco_b','arboles','municipio','poligono','parcela','latitud','longitud','ultima_visita'];
   const c=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
-  const L=[cols.join(';')].concat(rows.map(f=>[f.finca,f.propietarios,f.variedad,f.patron,f.superficie,f.marco_a,f.marco_b,arb(f),f.municipio,f.poligono,f.parcela,f.lat,f.lng,fmt(lastVisit(f))].map(c).join(';')));
+  const L=[cols.join(';')].concat(rows.map(f=>[f.finca,f.propietarios,f.variedad,f.patron,f.superficie,f.marco_a,f.marco_b,arb(f),munis(f).join(' | '),parcelasDe(f).map(p=>p.poligono||'').join(' | '),parcelasDe(f).map(p=>p.parcela||'').join(' | '),f.lat,f.lng,fmt(lastVisit(f))].map(c).join(';')));
   dl(fname('csv'),new Blob(['\ufeff'+L.join('\n')],{type:'text/csv;charset=utf-8'}))}
 function exportPdf(){const rows=filtered();if(!rows.length)return toast('No hay fincas con esos filtros.');
   const J=window.jspdf&&window.jspdf.jsPDF;if(!J)return toast('No se pudo cargar el generador de PDF.');
   const d=new J({orientation:'landscape',unit:'mm',format:'a4'});
-  const C=[['Finca',38,f=>f.finca],['Propietarios',42,f=>f.propietarios],['Variedad',28,f=>f.variedad],['Patrón',28,f=>f.patron],['Sup. (ha)',14,f=>f.superficie],['Marco',18,f=>(f.marco_a&&f.marco_b)?f.marco_a+'x'+f.marco_b:''],['Árboles',18,f=>arb(f)],['Municipio',34,f=>f.municipio],['Pol./Parc.',20,f=>(f.poligono||'-')+'/'+(f.parcela||'-')],['Últ. visita',30,f=>fmt(lastVisit(f))]];
+  const C=[['Finca',38,f=>f.finca],['Propietarios',36,f=>f.propietarios],['Variedad',28,f=>f.variedad],['Patrón',28,f=>f.patron],['Sup. (ha)',14,f=>f.superficie],['Marco',18,f=>(f.marco_a&&f.marco_b)?f.marco_a+'x'+f.marco_b:''],['Árboles',18,f=>arb(f)],['Municipio',34,f=>munis(f).join(', ')],['Pol./Parc.',26,f=>parcelasDe(f).map(p=>(p.poligono||'-')+'/'+(p.parcela||'-')).join(' · ')||'-'],['Últ. visita',30,f=>fmt(lastVisit(f))]];
   let y=0;
   const head=()=>{d.setFontSize(14);d.setFont(undefined,'bold');d.text('Listado de fincas de cítricos',10,14);d.setFontSize(9);d.setFont(undefined,'normal');d.text('Variedad: '+(fv||'todas')+'   Municipio: '+(fm||'todos')+'   Fecha: '+new Date().toLocaleDateString('es-ES'),10,20);
     y=25;d.setFillColor(47,125,50);d.rect(10,y,270,7,'F');d.setTextColor(255);d.setFont(undefined,'bold');let x=10;C.forEach(c=>{d.text(c[0],x+1,y+5);x+=c[1]});d.setTextColor(0);d.setFont(undefined,'normal');y+=7};
