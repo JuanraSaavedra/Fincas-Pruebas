@@ -1,1 +1,7 @@
-Fincas 2.3: revisión puntual. SIGPAC por referencia abre URL oficial en pestaña nueva, GPS siempre centra por coordenadas. Códigos municipales: catálogo PARCIAL (no resuelto para toda España). El visor SIGPAC no devuelve la selección a la web: requiere integración cartográfica autorizada. No usar con datos reales hasta auditar seguridad y sincronización.
+FINCAS 2.4 — VERSIÓN EXPERIMENTAL
+
+Cambios: selector real de municipios por provincia; carga del catálogo nacional de municipios y códigos INE desde un dataset público basado en datos INE y caché local tras la primera descarga; autocompletado del código municipal al seleccionar; selector explícito de propietario existente; guardado del campo recinto; enlace SIGPAC por referencia construido con los parámetros descritos en el manual oficial.
+
+IMPORTANTE: el catálogo INE puede no coincidir en todos los casos con los códigos de referencia SIGPAC; validar la parcela en el visor. La selección de una parcela dentro de una pestaña externa de SIGPAC no puede volver automáticamente a esta web. Esa función requiere integrar un mapa y un servicio geográfico de consulta en la propia aplicación. La búsqueda GPS actual intenta centrar el visor y no identifica por sí sola la parcela.
+
+El catálogo se descarga al tener Internet y se conserva localmente para usos posteriores; si se limpia el almacenamiento del navegador, habrá que descargarlo otra vez. Esta versión no está auditada para producción.

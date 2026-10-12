@@ -57,8 +57,15 @@ const hasGeo=f=>f.lat!=null&&f.lng!=null;
 const mapsUrl=f=>`https://www.google.com/maps/search/?api=1&query=${f.lat},${f.lng}`;
 const satUrl=f=>`https://www.google.com/maps/@${f.lat},${f.lng},18z/data=!3m1!1e3`;
 const SIG='https://sigpac.mapa.gob.es/fega/visor/';
-// Códigos SIGPAC verificados para municipios iniciales. Catálogo completo pendiente.
-const MUNICIPIO_CODIGOS={'41':{'La Rinconada':'081','Sevilla':'091','Dos Hermanas':'038','Utrera':'095'}}; // Catálogo parcial; no inventar códigos
+// Catálogo municipal basado en la relación de municipios y códigos INE; se descarga una vez y queda en caché para uso sin conexión.
+const MUNICIPIOS_URL='https://raw.githubusercontent.com/codeforspain/ds-organizacion-administrativa/master/data/municipios.json';
+const MUNICIPIOS_CACHE='fincas_municipios_ine_2026';
+let municipiosINE=[];
+function nombreMunicipioClave(s){let n=normaliza(s);if(n.includes(',')){const a=n.split(',').map(x=>x.trim());if(a.length===2){const art=a[1];if(['la','el','los','las'].includes(art))n=art+' '+a[0];}}return n}
+async function cargarCatalogoMunicipios(){try{const cached=JSON.parse(localStorage.getItem(MUNICIPIOS_CACHE)||'[]');if(Array.isArray(cached)&&cached.length>7000)municipiosINE=cached;}catch{}
+  if(!navigator.onLine)return municipiosINE;
+  try{const r=await fetch(MUNICIPIOS_URL,{cache:'no-cache'});if(!r.ok)throw Error('HTTP '+r.status);const data=await r.json();if(Array.isArray(data)&&data.length>7000){municipiosINE=data;try{localStorage.setItem(MUNICIPIOS_CACHE,JSON.stringify(data))}catch{}}}catch(e){console.warn('Catálogo de municipios no actualizado; se usa la copia local si existe.',e)}return municipiosINE}
+function buscarMunicipio(prov,nombre){const clave=nombreMunicipioClave(nombre);return municipiosINE.find(m=>m.provincia_id===prov&&(nombreMunicipioClave(m.nombre)===clave||normaliza(m.nombre)===normaliza(nombre)))}
 const normaliza=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/^(el|la|los|las)\s+/,'').replace(/\s+/g,' ');
 const VARIEDADES={Naranjas:['Navelina','Newhall','Washington Navel','Navelate','Lane Late','Powell Summer Navel','Barnfield','Chislett Summer Navel','Salustiana','Valencia Late','Valencia Midknight','Valencia Delta Seedless'],Mandarinas:['Oronules','Clemenules','Clemenvilla','Marisol','Orogrande','Orri','Tango','Nadorcott','Ortanique','Hernandina','Arrufatina']};
 const PATRONES=['Carrizo','Troyer','Citrus macrophylla','Cleopatra','Forner-Alcaide nº 5','Forner-Alcaide nº 13','Forner-Alcaide nº 517','C-35','Citrumelo Swingle','Poncirus trifoliata','Volkameriana','Naranjo amargo'];
@@ -69,7 +76,22 @@ const MUNICIPIOS_BASE={'41':['La Rinconada','Sevilla','Dos Hermanas','Alcalá de
 const option=(v,t,selected)=>`<option value="${esc(v)}" ${String(v)===String(selected??'')?'selected':''}>${esc(t)}</option>`;
 const selectOrOther=(id,values,selected,placeholder)=>`<select id="${id}">${option('',placeholder,selected)}${[...new Set([...values,...(selected?[selected]:[])])].map(v=>option(v,v,selected)).join('')}${option('__otro__','Otra / escribir manualmente…','')}</select><input id="${id}_otro" style="display:none;margin-top:6px" placeholder="Escribe el valor">`;
 function setupOther(id){const el=$('#'+id),other=$('#'+id+'_otro');el.onchange=()=>{other.style.display=el.value==='__otro__'?'block':'none'};return()=>el.value==='__otro__'?other.value.trim():el.value}
-function sigUrl(f){const base=new URL(SIG);if(f.prov_cod&&f.mun_cod&&f.poligono&&f.parcela){Object.entries({provincia:f.prov_cod,municipio:f.mun_cod,agregado:0,zona:0,poligono:f.poligono,parcela:f.parcela,recinto:f.recinto||0}).forEach(([k,v])=>base.searchParams.set(k,v));return base.href}if(hasGeo(f)){Object.entries({x:f.lng,y:f.lat,srid:4326,r:400}).forEach(([k,v])=>base.searchParams.set(k,v))}return base.href}
+function sigUrl(f){
+  // Formato de parámetros publicado en la ayuda oficial del Visor SIGPAC.
+  const u=new URL(SIG);
+  if(f.prov_cod&&f.mun_cod&&f.poligono&&f.parcela){
+    u.searchParams.set('provincia',String(f.prov_cod).padStart(2,'0'));
+    u.searchParams.set('municipio',String(f.mun_cod).padStart(3,'0'));
+    u.searchParams.set('agregado','0');u.searchParams.set('zona','0');
+    u.searchParams.set('poligono',String(f.poligono).trim());
+    u.searchParams.set('parcela',String(f.parcela).trim());
+    if(f.recinto)u.searchParams.set('recinto',String(f.recinto).trim());
+  }else if(hasGeo(f)){
+    // El visor oficial no documenta estos parámetros como devolución de parcela; solo se intenta centrar por coordenadas.
+    u.searchParams.set('x',String(f.lng));u.searchParams.set('y',String(f.lat));u.searchParams.set('srid','4326');u.searchParams.set('r','400');
+  }
+  return u.href;
+}
 const CACHE_KEY='fincas2_cache_v1',QUEUE_KEY='fincas2_queue_v1';
 const getStored=k=>{try{return JSON.parse(localStorage.getItem(k)||'[]')}catch{return []}};
 const setStored=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch{toast('Almacenamiento local lleno: exporta una copia.');return false}};
@@ -159,7 +181,7 @@ function form(app){
   const F=(k,l,t='text',ex='')=>`<label>${l}</label><input id="f_${k}" type="${t}" ${ex} value="${esc(f[k])}">`;
   const D='step="any" inputmode="decimal"';
   app.innerHTML=`<div class="card"><h2 style="margin:0">${f.id?'Editar finca':'Nueva finca'}</h2>
-  <div class="section-title">🌿 Datos del cultivo</div><label>Seleccionar finca existente (opcional)</label><select id="f_existente"><option value="">➕ Nueva finca / mantener edición actual</option>${[...fincas].sort((a,b)=>(a.finca||'').localeCompare(b.finca||'')).map(x=>`<option value="${esc(x.id)}" ${x.id===f.id?'selected':''}>${esc(x.finca)} — ${esc(x.municipio||'Sin municipio')}</option>`).join('')}</select><p class="helper">Al seleccionar una finca existente se abre su ficha para evitar duplicados.</p>${F('finca','Finca')}<datalist id="fincas_sugeridas">${uniq('finca').map(x=>`<option value="${esc(x)}"></option>`).join('')}</datalist>${F('propietarios','Propietarios')}<datalist id="propietarios_sugeridos">${uniq('propietarios').map(x=>`<option value="${esc(x)}"></option>`).join('')}</datalist>
+  <div class="section-title">🌿 Datos del cultivo</div><label>Seleccionar finca existente (opcional)</label><select id="f_existente"><option value="">➕ Nueva finca / mantener edición actual</option>${[...fincas].sort((a,b)=>(a.finca||'').localeCompare(b.finca||'')).map(x=>`<option value="${esc(x.id)}" ${x.id===f.id?'selected':''}>${esc(x.finca)} — ${esc(x.municipio||'Sin municipio')}</option>`).join('')}</select><p class="helper">Selecciona una finca para cargarla y editarla.</p>${F('finca','Finca')}<datalist id="fincas_sugeridas">${uniq('finca').map(x=>`<option value="${esc(x)}"></option>`).join('')}</datalist><label>Elegir propietario existente (opcional)</label><select id="f_propietario_existente"><option value="">Nuevo propietario / no seleccionar</option>${uniq('propietarios').map(x=>`<option value="${esc(x)}" ${x===f.propietarios?'selected':''}>${esc(x)}</option>`).join('')}</select>${F('propietarios','Propietarios')}<datalist id="propietarios_sugeridos">${uniq('propietarios').map(x=>`<option value="${esc(x)}"></option>`).join('')}</datalist>
   <label>Tipo de cítrico</label><select id="f_tipo">${option('Naranjas','Naranjas',f.tipo||'Naranjas')}${option('Mandarinas','Mandarinas',f.tipo)}</select>
   <label>Variedad</label><div id="variedad_box"></div>
   <label>Patrón</label>${selectOrOther('f_patron',PATRONES,f.patron,'Seleccionar patrón')}
@@ -168,8 +190,8 @@ function form(app){
   <label>Árboles (calculado: 10.000 / (marco A × B) × superficie)</label><input id="arbs" readonly value="${arb(f)}">
   <div class="section-title">📍 Ubicación y SIGPAC</div>
   <label>Provincia</label><select id="f_prov_cod"><option value="">Seleccionar provincia</option><optgroup label="Andalucía">${PROVINCIAS.filter(x=>ANDALUCIA.has(x[0])).map(x=>option(x[0],x[1],f.prov_cod)).join('')}</optgroup><optgroup label="Resto de España">${PROVINCIAS.filter(x=>!ANDALUCIA.has(x[0])).map(x=>option(x[0],x[1],f.prov_cod)).join('')}</optgroup></select>
-  <label>Municipio (sugerencias según provincia)</label><input id="f_municipio" list="municipios_lista" value="${esc(f.municipio)}" placeholder="Selecciona o escribe municipio"><datalist id="municipios_lista"></datalist>
-  <label>Código municipal SIGPAC (3 cifras)</label><input id="f_mun_cod" inputmode="numeric" maxlength="3" placeholder="Ej. 081" value="${esc(f.mun_cod)}"><p class="helper" id="municipio_aviso">Los códigos se completan para los municipios incluidos en el catálogo verificado; otros requieren introducirlos manualmente.</p>
+  <label>Municipio (selecciona de la lista)</label><select id="f_municipio"><option value="">Selecciona primero la provincia</option>${f.municipio?option(f.municipio,f.municipio,f.municipio):""}</select>
+  <label>Código municipal (3 cifras)</label><input id="f_mun_cod" inputmode="numeric" maxlength="3" placeholder="Se completa al elegir municipio" value="${esc(f.mun_cod)}"><p class="helper" id="municipio_aviso">Elige la provincia y después el municipio. El código se rellena desde el catálogo INE; comprueba la referencia SIGPAC antes de guardar.</p>
   <div class="row"><div>${F('poligono','Polígono')}</div><div>${F('parcela','Parcela')}</div></div><label>Recinto SIGPAC (opcional)</label><input id="f_recinto" inputmode="numeric" value="${esc(f.recinto||'')}">
   <div class="row"><div>${F('lat','Latitud','text','inputmode="decimal"')}</div><div>${F('lng','Longitud','text','inputmode="decimal"')}</div></div>
   <div class="row" style="margin-top:8px"><button class="s" id="gps">📍 Usar mi ubicación</button><a class="btn s" href="https://www.google.com/maps" target="_blank" rel="noopener">Abrir Google Maps</a></div>
@@ -182,15 +204,16 @@ function form(app){
   const refreshVariedad=()=>{$('#variedad_box').innerHTML=selectOrOther('f_variedad',VARIEDADES[$('#f_tipo').value],f.variedad,'Seleccionar variedad');readVariedad=setupOther('f_variedad')};
   refreshVariedad();$('#f_tipo').onchange=()=>{f.variedad='';refreshVariedad()};
   $('#f_existente').onchange=e=>{if(!e.target.value)return;cur=e.target.value;draft=fincas.find(x=>x.id===cur);view='form';render()};
-  const autoCodigoMunicipio=()=>{const provincia=$('#f_prov_cod').value;const nombre=normaliza($('#f_municipio').value);const entry=Object.entries(MUNICIPIO_CODIGOS[provincia]||{}).find(([n])=>normaliza(n)===nombre);if(entry){$('#f_mun_cod').value=entry[1];$('#municipio_aviso').textContent='✓ Código SIGPAC completado automáticamente'}else{$('#f_mun_cod').value='';$('#municipio_aviso').textContent='Municipio sin código en el catálogo de pruebas: introduce su código SIGPAC manualmente.'}};
   $('#f_finca').setAttribute('list','fincas_sugeridas');$('#f_propietarios').setAttribute('list','propietarios_sugeridos');
-  $('#f_municipio').addEventListener('input',autoCodigoMunicipio);$('#f_municipio').addEventListener('change',autoCodigoMunicipio);
-  const refreshMunicipios=()=>{$('#municipios_lista').innerHTML=(MUNICIPIOS_BASE[$('#f_prov_cod').value]||[]).map(x=>`<option value="${esc(x)}"></option>`).join('')};refreshMunicipios();
-  $('#f_prov_cod').onchange=()=>{$('#f_municipio').value='';$('#f_mun_cod').value='';refreshMunicipios();autoCodigoMunicipio()};
-  autoCodigoMunicipio();
+  $('#f_propietario_existente').onchange=e=>{if(e.target.value)$('#f_propietarios').value=e.target.value};
+  const autoCodigoMunicipio=()=>{const provincia=$('#f_prov_cod').value;const nombre=$('#f_municipio').value;const m=buscarMunicipio(provincia,nombre);if(m){$('#f_mun_cod').value=m.cmun;$('#municipio_aviso').textContent='✓ Código municipal completado desde el catálogo INE ('+m.municipio_id+'). Verifica que coincida con la referencia SIGPAC.'}else if(nombre){$('#municipio_aviso').textContent='No se encontró el municipio en el catálogo cargado. Comprueba provincia y nombre.'}else{$('#f_mun_cod').value='';$('#municipio_aviso').textContent='Elige un municipio para completar el código.'}};
+  const refreshMunicipios=()=>{const prov=$('#f_prov_cod').value;const sel=$('#f_municipio');const prev=sel.value||f.municipio||'';let arr=municipiosINE.filter(m=>m.provincia_id===prov).sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));if(!arr.length)arr=(MUNICIPIOS_BASE[prov]||[]).map((nombre,i)=>({nombre,cmun:'',municipio_id:prov+String(i+1).padStart(3,'0')}));sel.innerHTML='<option value="">Selecciona municipio</option>'+arr.map(m=>option(m.nombre,m.nombre, nombreMunicipioClave(m.nombre)===nombreMunicipioClave(prev)?m.nombre:'')).join('');if(prev&&!arr.some(m=>nombreMunicipioClave(m.nombre)===nombreMunicipioClave(prev)))sel.insertAdjacentHTML('beforeend',option(prev,prev,prev));if(prev)sel.value=[...sel.options].find(o=>nombreMunicipioClave(o.value)===nombreMunicipioClave(prev))?.value||'';autoCodigoMunicipio()};
+  $('#f_municipio').onchange=autoCodigoMunicipio;
+  $('#f_prov_cod').onchange=()=>{$('#f_mun_cod').value='';refreshMunicipios()};
+  refreshMunicipios();cargarCatalogoMunicipios().then(()=>{if($('#f_prov_cod'))refreshMunicipios()});
   const keys=['finca','propietarios','recinto','superficie','marco_a','marco_b','municipio','poligono','parcela','lat','lng'];
   const read=()=>{keys.forEach(k=>f[k]=$('#f_'+k).value.trim());f.variedad=readVariedad();f.patron=readPatron();f.tipo=$('#f_tipo').value;f.prov_cod=$('#f_prov_cod').value||null;f.mun_cod=$('#f_mun_cod').value.trim()||null};
-  $('#sigref').onclick=()=>{read();if(!f.prov_cod||!f.mun_cod||!f.poligono||!f.parcela)return toast('Faltan provincia, código municipal, polígono o parcela.');if(!/^\d{1,3}$/.test(f.mun_cod)||!/^\d+$/.test(f.poligono)||!/^\d+$/.test(f.parcela))return toast('Revisa los números de municipio, polígono y parcela.');window.open(sigUrl(f),'_blank','noopener,noreferrer')};
+  $('#sigref').onclick=()=>{read();if(!f.prov_cod||!f.mun_cod||!f.poligono||!f.parcela)return toast('Faltan provincia, código municipal, polígono o parcela.');if(!/^\d{1,3}$/.test(f.mun_cod)||!/^\d+$/.test(f.poligono)||!/^\d+$/.test(f.parcela))return toast('Revisa los números de municipio, polígono y parcela.');const w=window.open(sigUrl(f),'_blank');if(!w){toast('El navegador bloqueó la pestaña. Se abrirá SIGPAC en esta ventana.');window.location.href=sigUrl(f)}};
   $('#siggps').onclick=()=>{read();if(!hasGeo(f))return toast('Primero introduce coordenadas o usa GPS.');const u=new URL(SIG);Object.entries({x:f.lng,y:f.lat,srid:4326,r:400}).forEach(([k,v])=>u.searchParams.set(k,v));window.open(u.href,'_blank','noopener,noreferrer')};
   ['superficie','marco_a','marco_b'].forEach(k=>$('#f_'+k).oninput=()=>{read();$('#arbs').value=arb(f)});
   $('#gps').onclick=()=>{if(!navigator.geolocation)return toast('Este dispositivo no tiene geolocalización.');toast('Buscando tu posición…');
@@ -200,7 +223,7 @@ function form(app){
   if(!f.id)bindPicker();
   $('#cn').onclick=()=>{view=f.id?'detail':'list';render()};
   $('#ok').onclick=async()=>{read();if(!f.finca)return toast('Pon un nombre a la finca.');const b=$('#ok');b.disabled=true;b.textContent='Guardando…';
-    const row={finca:f.finca,propietarios:f.propietarios,variedad:f.variedad,patron:f.patron,superficie:num(f.superficie),marco_a:num(f.marco_a),marco_b:num(f.marco_b),municipio:f.municipio,poligono:f.poligono,parcela:f.parcela,lat:num(f.lat),lng:num(f.lng),prov_cod:f.prov_cod??null,mun_cod:f.mun_cod??null};
+    const row={finca:f.finca,propietarios:f.propietarios,variedad:f.variedad,patron:f.patron,superficie:num(f.superficie),marco_a:num(f.marco_a),marco_b:num(f.marco_b),municipio:f.municipio,poligono:f.poligono,parcela:f.parcela,recinto:f.recinto||null,lat:num(f.lat),lng:num(f.lng),prov_cod:f.prov_cod??null,mun_cod:f.mun_cod??null};
     if(!navigator.onLine){if(pend.length||($('#f_nota')&&$('#f_nota').value.trim())){toast('Sin conexión: guarda primero la finca sin fotos ni anotación.');b.disabled=false;b.textContent='Guardar';return}const id=queueSave(f,row);if(id){cur=id;view='detail';render();toast('Guardada en este dispositivo. Se sincronizará al recuperar Internet.')}else{b.disabled=false;b.textContent='Guardar'}return}
     try{let id=f.id;
       if(id){const {error}=await sb.from('fincas').update(row).eq('id',id);if(error)throw error}
