@@ -52,6 +52,20 @@ input:focus,select:focus,textarea:focus{outline:2px solid #55a77c;outline-offset
 .pin{background:none;border:0}.pinx{position:absolute;left:-14px;top:-34px;font-size:30px;line-height:1;filter:drop-shadow(0 1px 2px #000)}
 .pint{position:absolute;left:14px;top:-30px;white-space:nowrap;background:#fffffff2;color:#111;border-radius:8px;padding:1px 7px;font-size:12px;font-weight:700;box-shadow:0 1px 4px #0007}
 .row.w{flex-wrap:wrap}.row.w>*{flex:1 1 30%}
+
+/* Modo noche (sigue el ajuste del iPad) */
+:root{color-scheme:light dark}
+@media (prefers-color-scheme:dark){
+:root{--bg:#0f160e;--card:#1b2619;--tx:#eef2ea;--mu:#a3b49e;--bd:#34452f;--ac2:#5cc08a;--ac:#f0922e}
+.card{box-shadow:0 5px 22px #0007}
+.tag{background:#27351f;color:var(--tx)}
+.note{background:#ffffff08}
+header{background:linear-gradient(120deg,#0e3a2d,#1a5c40)}
+button.s,.btn.s{background:#243220;color:var(--tx)}
+input::placeholder,textarea::placeholder{color:#7f9179}
+.ph img,.pvi img{border-color:var(--bd)}
+.mpan{background:var(--card)}
+}
 </style></head><body>
 <header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.0</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
 <main id="app"></main><div id="toast" class="toast"></div>

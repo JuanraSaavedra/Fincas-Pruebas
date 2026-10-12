@@ -1,4 +1,4 @@
-FINCAS 2.6
+FINCAS 2.7 (modo noche corregido; resto igual que 2.6)
 
 ANTES DE USARLA: en Supabase -> SQL Editor, ejecutar una sola vez:
   alter table public.fincas add column if not exists parcelas jsonb not null default '[]'::jsonb;
