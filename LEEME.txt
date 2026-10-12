@@ -1,7 +1,9 @@
-FINCAS 2.4 — VERSIÓN EXPERIMENTAL
+FINCAS 2.5
 
-Cambios: selector real de municipios por provincia; carga del catálogo nacional de municipios y códigos INE desde un dataset público basado en datos INE y caché local tras la primera descarga; autocompletado del código municipal al seleccionar; selector explícito de propietario existente; guardado del campo recinto; enlace SIGPAC por referencia construido con los parámetros descritos en el manual oficial.
+Novedades:
+- "Elegir parcela en el mapa": mapa satélite dentro de la app con los recintos SIGPAC oficiales. Se abre en tu ubicación; al tocar una parcela se rellenan provincia, municipio, polígono, parcela, recinto y coordenadas (consulta oficial del FEGA).
+- Eliminados los botones "Buscar parcela SIGPAC" y "Ver GPS en SIGPAC".
+- "Mapa" en la lista: todas las fincas (respetando filtros) con chincheta y nombre. También en cada ficha.
+- Google Maps desde la ficha abre la chincheta con el nombre de la finca.
 
-IMPORTANTE: el catálogo INE puede no coincidir en todos los casos con los códigos de referencia SIGPAC; validar la parcela en el visor. La selección de una parcela dentro de una pestaña externa de SIGPAC no puede volver automáticamente a esta web. Esa función requiere integrar un mapa y un servicio geográfico de consulta en la propia aplicación. La búsqueda GPS actual intenta centrar el visor y no identifica por sí sola la parcela.
-
-El catálogo se descarga al tener Internet y se conserva localmente para usos posteriores; si se limpia el almacenamiento del navegador, habrá que descargarlo otra vez. Esta versión no está auditada para producción.
+Para actualizar: sube estos archivos a GitHub sustituyendo los anteriores (todos en la raíz del repositorio).
