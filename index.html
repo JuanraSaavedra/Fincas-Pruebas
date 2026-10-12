@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2f7d32"><link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>Fincas 2.0 · Cítricos</title>
+<style>
+:root{--bg:#f6f7f2;--card:#fff;--tx:#1d2a1a;--mu:#6b7a66;--ac:#e8820c;--ac2:#2f7d32;--bd:#dde2d6;--dn:#c0392b}
+@media (prefers-color-scheme:dark){:root{--bg:#141a12;--card:#1e271b;--tx:#eef2ea;--mu:#9aa995;--bd:#34412f}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;padding-bottom:env(safe-area-inset-bottom)}
+header{position:sticky;top:0;background:var(--ac2);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;gap:8px;align-items:center;z-index:5}
+header h1{font-size:18px;margin:0;flex:1}header button{background:rgba(255,255,255,.2)}
+main{max-width:720px;margin:0 auto;padding:12px}
+button,input,textarea,select{font:inherit}
+button,.btn{border:0;border-radius:10px;padding:10px 14px;background:var(--ac);color:#fff;cursor:pointer}
+button.s,.btn.s{background:var(--card);color:var(--tx);border:1px solid var(--bd)}button.d{background:var(--dn)}
+.btn{display:block;text-align:center;text-decoration:none;flex:1;font-size:15px}
+input,textarea,select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx)}
+label{display:block;font-size:13px;color:var(--mu);margin:10px 0 3px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin:10px 0}
+.row{display:flex;gap:8px}.row>*{flex:1}.mu{color:var(--mu);font-size:14px}.item{cursor:pointer}.item b{font-size:17px}
+.tag{display:inline-block;background:var(--bg);border:1px solid var(--bd);border-radius:20px;padding:2px 9px;font-size:13px;margin:4px 4px 0 0}
+.note{border-left:3px solid var(--ac);padding:4px 10px;margin:8px 0}.note small{color:var(--mu)}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}.kv div span{display:block;font-size:12px;color:var(--mu)}
+.ph,.pv{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ph img{width:92px;height:92px;object-fit:cover;border-radius:8px;border:1px solid var(--bd);background:var(--bg)}
+.pvi{position:relative}.pvi img{width:64px;height:64px;object-fit:cover;border-radius:8px}.pvi b{position:absolute;top:-6px;right:-6px;background:var(--dn);color:#fff;border-radius:50%;width:20px;height:20px;text-align:center;font-size:13px;line-height:20px;cursor:pointer}
+.fi{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.toast{display:none;position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));background:#222;color:#fff;padding:12px;border-radius:12px;z-index:9;font-size:14px}
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:20;display:flex;align-items:center;justify-content:center}.lb img{max-width:100%;max-height:100%}
+
+/* Fincas 2.0: modernización móvil */
+:root{--bg:#f3f6f1;--ac2:#155e43;--ac:#e88722;--bd:#dbe6dc}
+header{background:linear-gradient(120deg,#124c3c,#247953);box-shadow:0 4px 18px #123b2922}
+header h1{font-weight:750;letter-spacing:-.4px}main{max-width:820px;padding:16px}
+.card{border-radius:20px;padding:18px;box-shadow:0 5px 22px #1c3c2410}
+button,.btn,input,textarea,select{min-height:44px}button,.btn{font-weight:650}
+input:focus,select:focus,textarea:focus{outline:2px solid #55a77c;outline-offset:1px}
+.card h2{color:var(--ac2)}.section-title{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ac2);margin:20px 0 6px}
+.status{font-size:12px;padding:5px 9px;background:#ffffff22;border-radius:12px;white-space:nowrap}
+.helper{font-size:12px;color:var(--mu);margin:5px 0 10px}
+@media(max-width:430px){main{padding:10px}.card{padding:14px}.row{flex-wrap:wrap}.row>*{min-width:0}}
+</style></head><body>
+<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.0</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
+<main id="app"></main><div id="toast" class="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="config.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let fincas=[],view='login',cur=null,q='',fv='',fm='',draft=null,pend=[],urlCache={};
+const fmt=iso=>iso?new Date(iso).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):'—';
+const num=v=>{v=String(v??'').replace(',','.').trim();return v===''||isNaN(v)?null:+v};
+const arb=f=>{const a=+f.marco_a,b=+f.marco_b,s=+f.superficie;return a>0&&b>0&&s>0?Math.round(10000/(a*b)*s):0};
+const hasGeo=f=>f.lat!=null&&f.lng!=null;
+const mapsUrl=f=>`https://www.google.com/maps/search/?api=1&query=${f.lat},${f.lng}`;
+const satUrl=f=>`https://www.google.com/maps/@${f.lat},${f.lng},18z/data=!3m1!1e3`;
+const SIG='https://sigpac.mapa.gob.es/fega/visor/';
+const VARIEDADES={Naranjas:['Navelina','Newhall','Washington Navel','Navelate','Lane Late','Powell Summer Navel','Barnfield','Chislett Summer Navel','Salustiana','Valencia Late','Valencia Midknight','Valencia Delta Seedless'],Mandarinas:['Oronules','Clemenules','Clemenvilla','Marisol','Orogrande','Orri','Tango','Nadorcott','Ortanique','Hernandina','Arrufatina']};
+const PATRONES=['Carrizo','Troyer','Citrus macrophylla','Cleopatra','Forner-Alcaide nº 5','Forner-Alcaide nº 13','Forner-Alcaide nº 517','C-35','Citrumelo Swingle','Poncirus trifoliata','Volkameriana','Naranjo amargo'];
+const PROVINCIAS=[['01','Álava'],['02','Albacete'],['03','Alicante'],['04','Almería'],['05','Ávila'],['06','Badajoz'],['07','Illes Balears'],['08','Barcelona'],['09','Burgos'],['10','Cáceres'],['11','Cádiz'],['12','Castellón'],['13','Ciudad Real'],['14','Córdoba'],['15','A Coruña'],['16','Cuenca'],['17','Girona'],['18','Granada'],['19','Guadalajara'],['20','Gipuzkoa'],['21','Huelva'],['22','Huesca'],['23','Jaén'],['24','León'],['25','Lleida'],['26','La Rioja'],['27','Lugo'],['28','Madrid'],['29','Málaga'],['30','Murcia'],['31','Navarra'],['32','Ourense'],['33','Asturias'],['34','Palencia'],['35','Las Palmas'],['36','Pontevedra'],['37','Salamanca'],['38','Santa Cruz de Tenerife'],['39','Cantabria'],['40','Segovia'],['41','Sevilla'],['42','Soria'],['43','Tarragona'],['44','Teruel'],['45','Toledo'],['46','Valencia'],['47','Valladolid'],['48','Bizkaia'],['49','Zamora'],['50','Zaragoza'],['51','Ceuta'],['52','Melilla']];
+const ANDALUCIA=new Set(['04','11','14','18','21','23','29','41']);
+// Lista local de sugerencias iniciales; se permite cualquier municipio para no bloquear registros.
+const MUNICIPIOS_BASE={'41':['La Rinconada','Sevilla','Dos Hermanas','Alcalá de Guadaíra','Carmona','Écija','Utrera','Los Palacios y Villafranca','Brenes','Alcalá del Río','Cantillana','Lora del Río','La Algaba','Guillena'],'21':['Huelva','Lepe','Cartaya','Almonte','Moguer','Palos de la Frontera','Bollullos Par del Condado'],'14':['Córdoba','Palma del Río','Posadas','Almodóvar del Río'],'11':['Cádiz','Jerez de la Frontera','Sanlúcar de Barrameda','Arcos de la Frontera'],'29':['Málaga','Vélez-Málaga','Coín','Cártama'],'18':['Granada','Motril','Almuñécar','Salobreña'],'23':['Jaén','Andújar','Linares'],'04':['Almería','El Ejido','Níjar']};
+const option=(v,t,selected)=>`<option value="${esc(v)}" ${String(v)===String(selected??'')?'selected':''}>${esc(t)}</option>`;
+const selectOrOther=(id,values,selected,placeholder)=>`<select id="${id}">${option('',placeholder,selected)}${[...new Set([...values,...(selected?[selected]:[])])].map(v=>option(v,v,selected)).join('')}${option('__otro__','Otra / escribir manualmente…','')}</select><input id="${id}_otro" style="display:none;margin-top:6px" placeholder="Escribe el valor">`;
+function setupOther(id){const el=$('#'+id),other=$('#'+id+'_otro');el.onchange=()=>{other.style.display=el.value==='__otro__'?'block':'none'};return()=>el.value==='__otro__'?other.value.trim():el.value}
+function sigUrl(f){const base=new URL(SIG);if(f.prov_cod&&f.mun_cod&&f.poligono&&f.parcela){Object.entries({provincia:f.prov_cod,municipio:f.mun_cod,agregado:0,zona:0,poligono:f.poligono,parcela:f.parcela}).forEach(([k,v])=>base.searchParams.set(k,v));return base.href}if(hasGeo(f)){Object.entries({x:f.lng,y:f.lat,srid:4326,r:400}).forEach(([k,v])=>base.searchParams.set(k,v))}return base.href}
+const CACHE_KEY='fincas2_cache_v1',QUEUE_KEY='fincas2_queue_v1';
+const getStored=k=>{try{return JSON.parse(localStorage.getItem(k)||'[]')}catch{return []}};
+const setStored=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch{toast('Almacenamiento local lleno: exporta una copia.');return false}};
+let pendingSync=getStored(QUEUE_KEY),syncing=false;
+function status(){const el=$('#net');if(el)el.textContent=(navigator.onLine?'● Conexión':'○ Sin red')+(pendingSync.length?' · '+pendingSync.length+' pendientes':'')}
+window.addEventListener('online',()=>{status();syncPending()});window.addEventListener('offline',status);
+function queueSave(f,row){const id=f.id||crypto.randomUUID(),item={kind:'finca',id,row,isNew:!f.id};pendingSync=pendingSync.filter(x=>x.id!==id);pendingSync.push(item);if(!setStored(QUEUE_KEY,pendingSync))return null;const existing=fincas.findIndex(x=>x.id===id);const updated={...f,...row,id,anotaciones:f.anotaciones||[],_pending:true};if(existing>=0)fincas[existing]=updated;else fincas.push(updated);setStored(CACHE_KEY,fincas);status();return id}
+async function syncPending(){if(syncing||!navigator.onLine||!pendingSync.length)return;const session=(await sb.auth.getSession()).data.session;if(!session)return;syncing=true;try{for(const item of [...pendingSync]){const data={...item.row};let result;if(item.isNew){result=await sb.from('fincas').insert({...data,id:item.id})}else{result=await sb.from('fincas').update(data).eq('id',item.id)}if(result.error)throw result.error;pendingSync=pendingSync.filter(x=>x.id!==item.id);setStored(QUEUE_KEY,pendingSync)}await load();if(view==='list')render()}catch(e){console.warn('Sincronización pendiente:',e.message);toast('Hay cambios pendientes de sincronizar.')}finally{syncing=false;status()}}
+
+const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',6000)};
+const lastVisit=f=>{const n=[...(f.anotaciones||[])].sort((a,b)=>a.fecha<b.fecha?1:-1);return n.length?n[0].fecha:null};
+const uniq=k=>[...new Set(fincas.map(f=>(f[k]||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+function filtered(){const t=q.toLowerCase();return fincas.filter(f=>(!fv||f.variedad===fv)&&(!fm||f.municipio===fm)&&[f.finca,f.propietarios,f.variedad,f.patron,f.municipio,f.poligono,f.parcela].join(' ').toLowerCase().includes(t)).sort((a,b)=>(a.finca||'').localeCompare(b.finca||''))}
+// ---------- sesión y datos ----------
+async function load(){const {data,error}=await sb.from('fincas').select('*, anotaciones(id,fecha,texto,fotos)').order('finca');if(error){fincas=getStored(CACHE_KEY);toast('Sin conexión con el servidor: mostrando copia local.');return}fincas=data||[];for(const item of pendingSync){const i=fincas.findIndex(f=>f.id===item.id);const row={...(i>=0?fincas[i]:{}),...item.row,id:item.id,_pending:true};if(i>=0)fincas[i]=row;else fincas.push(row)}setStored(CACHE_KEY,fincas)}
+(async()=>{const {data}=await sb.auth.getSession();if(data.session){await load();view='list'}render();status();if(data.session)syncPending();
+  sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'){fincas=[];localStorage.removeItem(CACHE_KEY);localStorage.removeItem(QUEUE_KEY);pendingSync=[];view='login';render()}});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})})();
+// ---------- fotos ----------
+async function signed(paths){const need=paths.filter(p=>!urlCache[p]);if(!need.length)return;const {data}=await sb.storage.from('fotos').createSignedUrls(need,3600);(data||[]).forEach(d=>{if(d.signedUrl)urlCache[d.path]=d.signedUrl})}
+function shrink(file,mx=1280,qd=.8){return createImageBitmap(file).then(bm=>{const k=Math.min(1,mx/Math.max(bm.width,bm.height)),c=document.createElement('canvas');c.width=Math.round(bm.width*k);c.height=Math.round(bm.height*k);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return new Promise(r=>c.toBlob(r,'image/jpeg',qd))})}
+async function uploadPhotos(fid,files){const out=[];for(const fl of files){const path=fid+'/'+crypto.randomUUID()+'.jpg';const {error}=await sb.storage.from('fotos').upload(path,await shrink(fl),{contentType:'image/jpeg'});if(error)throw error;out.push(path)}return out}
+function pickerHtml(){return `<div class="row" style="margin-top:8px"><label class="btn s" for="phc" style="margin:0">📷 Cámara</label><label class="btn s" for="phg" style="margin:0">🖼️ Galería</label></div><input class="fi" id="phc" type="file" accept="image/*" capture="environment"><input class="fi" id="phg" type="file" accept="image/*" multiple><div class="pv" id="pv"></div>`}
+function pv(){const el=$('#pv');if(!el)return;el.innerHTML=pend.map((f,i)=>`<span class="pvi"><img src="${URL.createObjectURL(f)}"><b data-i="${i}">×</b></span>`).join('');el.querySelectorAll('b').forEach(x=>x.onclick=()=>{pend.splice(+x.dataset.i,1);pv()})}
+function bindPicker(){const add=e=>{pend.push(...e.target.files);e.target.value='';pv()};$('#phc').onchange=add;$('#phg').onchange=add;pv()}
+function lightbox(u){if(!u)return;const d=document.createElement('div');d.className='lb';d.innerHTML='<img src="'+u+'">';d.onclick=()=>d.remove();document.body.appendChild(d)}
+// ---------- vistas ----------
+function render(){
+  const app=$('#app'),hb=$('#hb');status();
+  hb.innerHTML=view==='list'?'<button id="out">Salir</button>':(view==='login'?'':'<button id="bk">← Volver</button>');
+  const bk=$('#bk');if(bk)bk.onclick=()=>{view=(view==='form'&&cur)?'detail':'list';if(view==='list'){cur=null;pend=[]}render()};
+  const o=$('#out');if(o)o.onclick=()=>sb.auth.signOut();
+  if(view==='login')return login(app);if(view==='list')return list(app);if(view==='detail')return detail(app);form(app);
+}
+function login(app){
+  app.innerHTML=`<div class="card"><h2 style="margin:0">Acceso</h2><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
+  const go=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
+  $('#go').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};
+}
+function filtersHtml(){const vs=uniq('variedad'),ms=uniq('municipio');if(fv&&!vs.includes(fv))fv='';if(fm&&!ms.includes(fm))fm='';
+  const o=(a,v)=>'<option value="">Todas</option>'+a.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('');
+  return`<div class="row"><div><label>Variedad</label><select id="fv">${o(vs,fv)}</select></div><div><label>Municipio</label><select id="fm">${o(ms,fm)}</select></div></div>`}
+function list(app){
+  const rows=filtered(),tot=rows.reduce((s,f)=>s+(+f.superficie||0),0),ta=rows.reduce((s,f)=>s+arb(f),0);
+  app.innerHTML=`<div class="row"><input id="q" placeholder="Buscar…" value="${esc(q)}"><button id="new" style="flex:0 0 auto">＋ Nueva</button></div>${filtersHtml()}
+  <p class="mu">${pendingSync.length?'⏳ '+pendingSync.length+' cambios por sincronizar · ':''}${rows.length} fincas · ${tot.toFixed(2)} ha · ${ta.toLocaleString('es-ES')} árboles</p>
+  <div class="row"><button class="s" id="pdf">📄 PDF</button><button class="s" id="csv">CSV</button></div><p class="mu" style="margin:4px 0 0">PDF y CSV incluyen solo las fincas filtradas.</p>`+
+  (rows.map(f=>{const lv=lastVisit(f);return`<div class="card item" data-id="${f.id}"><b>${esc(f.finca)}</b><div class="mu">${esc(f.propietarios)}</div>
+   <span class="tag">${esc(f.variedad||'—')}</span>${f.patron?`<span class="tag">Patrón: ${esc(f.patron)}</span>`:''}<span class="tag">${f.superficie||0} ha</span><span class="tag">${arb(f).toLocaleString('es-ES')} árboles</span><span class="tag">${esc(f.municipio||'')}</span>
+   <div class="mu" style="margin-top:6px">Última visita: ${fmt(lv)}</div></div>`}).join('')||'<p class="mu">No hay fincas con esos criterios.</p>');
+  $('#fv').onchange=e=>{fv=e.target.value;render()};$('#fm').onchange=e=>{fm=e.target.value;render()};
+  $('#q').oninput=e=>{q=e.target.value;const p=e.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(p,p)};
+  $('#new').onclick=()=>{cur=null;draft={};pend=[];view='form';render()};
+  $('#pdf').onclick=exportPdf;$('#csv').onclick=exportCsv;
+  app.querySelectorAll('.item').forEach(e=>e.onclick=()=>{cur=e.dataset.id;view='detail';render()});
+}
+function detail(app){
+  const f=fincas.find(x=>x.id===cur);if(!f){view='list';return render()}
+  const notas=[...(f.anotaciones||[])].sort((a,b)=>a.fecha<b.fecha?1:-1);
+  app.innerHTML=`<div class="card"><h2 style="margin:0 0 8px">${esc(f.finca)}</h2><div class="kv">
+  <div><span>Propietarios</span>${esc(f.propietarios)||'—'}</div><div><span>Variedad</span>${esc(f.variedad)||'—'}</div>
+  <div><span>Patrón</span>${esc(f.patron)||'—'}</div><div><span>Superficie</span>${f.superficie||0} ha</div>
+  <div><span>Marco plantación</span>${f.marco_a||'?'} × ${f.marco_b||'?'} m</div><div><span>Árboles</span>${arb(f).toLocaleString('es-ES')}</div>
+  <div><span>Término municipal</span>${esc(f.municipio)||'—'}</div><div><span>Polígono / Parcela</span>${esc(f.poligono)||'—'} / ${esc(f.parcela)||'—'}</div>
+  <div style="grid-column:1/3"><span>Geolocalización</span>${hasGeo(f)?f.lat+', '+f.lng:'—'}</div></div>
+  <div class="row" style="margin-top:12px">${hasGeo(f)?`<a class="btn s" href="${mapsUrl(f)}" target="_blank" rel="noopener">📍 Mapa</a><a class="btn s" href="${satUrl(f)}" target="_blank" rel="noopener">🛰️ Satélite</a>`:''}<a class="btn s" href="${sigUrl(f)}" target="_blank" rel="noopener">🗺️ SIGPAC</a><button class="s" id="ed">✏️ Editar</button></div></div>
+  <div class="card"><b>Anotaciones</b><textarea id="nt" rows="3" placeholder="Nueva anotación (se guarda con fecha y hora)…" style="margin-top:8px"></textarea>${pickerHtml()}<button id="add" style="margin-top:8px;width:100%">Añadir anotación</button>
+  ${notas.map(n=>`<div class="note"><small>📅 ${fmt(n.fecha)}</small><div>${esc(n.texto).replace(/\n/g,'<br>')}</div>${(n.fotos||[]).length?'<div class="ph">'+n.fotos.map(p=>`<img data-p="${esc(p)}" src="${urlCache[p]||''}">`).join('')+'</div>':''}</div>`).join('')||'<p class="mu">Sin anotaciones.</p>'}</div>
+  <button class="d" id="dl" style="width:100%">Eliminar finca</button>`;
+  bindPicker();
+  const imgs=[...app.querySelectorAll('img[data-p]')];
+  signed(imgs.map(i=>i.dataset.p)).then(()=>imgs.forEach(i=>{i.src=urlCache[i.dataset.p]||'';i.onclick=()=>lightbox(i.src)}));
+  $('#ed').onclick=()=>{draft={...f};view='form';render()};
+  $('#add').onclick=async()=>{const b=$('#add'),t=$('#nt').value.trim(),files=[...pend];if(!t&&!files.length)return;b.disabled=true;b.textContent='Guardando…';
+    try{const fotos=await uploadPhotos(f.id,files);const {error}=await sb.from('anotaciones').insert({finca_id:f.id,texto:t,fotos});if(error)throw error;pend=[];await load();render()}
+    catch(e){toast('No se pudo guardar: '+(e.message||e));b.disabled=false;b.textContent='Añadir anotación'}};
+  const dl=$('#dl');let armed=false;dl.onclick=async()=>{if(!armed){armed=true;dl.textContent='Pulsa otra vez para confirmar';setTimeout(()=>{armed=false;dl.textContent='Eliminar finca'},4000);return}
+    const paths=notas.flatMap(n=>n.fotos||[]);if(paths.length)await sb.storage.from('fotos').remove(paths);
+    const {error}=await sb.from('fincas').delete().eq('id',f.id);if(error)return toast('Error: '+error.message);cur=null;await load();view='list';render()};
+}
+function parseGeo(t){t=decodeURIComponent(String(t||'')).trim();
+  let m=t.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||t.match(/[?&](?:q|query|ll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/)||t.match(/(-?\d+\.\d+)\s*[,;\s]\s*(-?\d+\.\d+)/);
+  if(!m){const c=t.match(/(-?\d+,\d+)\s*[;\s]\s*(-?\d+,\d+)/);if(c)m=[0,c[1].replace(',','.'),c[2].replace(',','.')]}
+  if(!m)return null;const a=+m[1],b=+m[2];return Math.abs(a)<=90&&Math.abs(b)<=180?[a.toFixed(6),b.toFixed(6)]:null}
+function form(app){
+  const f=draft||{};
+  const F=(k,l,t='text',ex='')=>`<label>${l}</label><input id="f_${k}" type="${t}" ${ex} value="${esc(f[k])}">`;
+  const D='step="any" inputmode="decimal"';
+  app.innerHTML=`<div class="card"><h2 style="margin:0">${f.id?'Editar finca':'Nueva finca'}</h2>
+  <div class="section-title">🌿 Datos del cultivo</div>${F('finca','Finca')}${F('propietarios','Propietarios')}
+  <label>Tipo de cítrico</label><select id="f_tipo">${option('Naranjas','Naranjas',f.tipo||'Naranjas')}${option('Mandarinas','Mandarinas',f.tipo)}</select>
+  <label>Variedad</label><div id="variedad_box"></div>
+  <label>Patrón</label>${selectOrOther('f_patron',PATRONES,f.patron,'Seleccionar patrón')}
+  ${F('superficie','Superficie (ha)','number',D)}
+  <div class="row"><div>${F('marco_a','Marco plantación (m)','number',D)}</div><div>${F('marco_b','× (m)','number',D)}</div></div>
+  <label>Árboles (calculado: 10.000 / (marco A × B) × superficie)</label><input id="arbs" readonly value="${arb(f)}">
+  <div class="section-title">📍 Ubicación y SIGPAC</div>
+  <label>Provincia</label><select id="f_prov_cod"><option value="">Seleccionar provincia</option><optgroup label="Andalucía">${PROVINCIAS.filter(x=>ANDALUCIA.has(x[0])).map(x=>option(x[0],x[1],f.prov_cod)).join('')}</optgroup><optgroup label="Resto de España">${PROVINCIAS.filter(x=>!ANDALUCIA.has(x[0])).map(x=>option(x[0],x[1],f.prov_cod)).join('')}</optgroup></select>
+  <label>Municipio (sugerencias según provincia)</label><input id="f_municipio" list="municipios_lista" value="${esc(f.municipio)}" placeholder="Selecciona o escribe municipio"><datalist id="municipios_lista"></datalist>
+  <label>Código municipal SIGPAC (3 cifras)</label><input id="f_mun_cod" inputmode="numeric" maxlength="3" placeholder="Ej. 081" value="${esc(f.mun_cod)}"><p class="helper">Para buscar una parcela por referencia, indica el código municipal SIGPAC. La lista inicial de municipios es parcial; puedes escribir cualquiera.</p>
+  <div class="row"><div>${F('poligono','Polígono')}</div><div>${F('parcela','Parcela')}</div></div>
+  <div class="row"><div>${F('lat','Latitud','text','inputmode="decimal"')}</div><div>${F('lng','Longitud','text','inputmode="decimal"')}</div></div>
+  <div class="row" style="margin-top:8px"><button class="s" id="gps">📍 Usar mi ubicación</button><a class="btn s" href="https://www.google.com/maps" target="_blank" rel="noopener">Abrir Google Maps</a></div>
+  <div class="row" style="margin-top:8px"><input id="pg" placeholder="…o pega enlace o coordenadas de Maps"><button class="s" id="pgb" style="flex:0 0 auto">Aplicar</button></div>
+  <div class="row" style="margin-top:8px"><button class="s" type="button" id="sigref">🗺️ Buscar parcela SIGPAC</button><button class="s" type="button" id="siggps">📍 Ver GPS en SIGPAC</button></div>
+  <p class="helper">El visor oficial se abre con la referencia o las coordenadas. La identificación automática de polígono y parcela a partir del GPS queda pendiente de integrar y verificar.</p>
+  ${f.id?'':'<label>Primera anotación (opcional)</label><textarea id="f_nota" rows="3"></textarea>'+pickerHtml()}
+  <div class="row" style="margin-top:14px"><button class="s" id="cn">Cancelar</button><button id="ok">Guardar</button></div></div>`;
+  let readPatron=setupOther('f_patron'),readVariedad=()=>'';
+  const refreshVariedad=()=>{$('#variedad_box').innerHTML=selectOrOther('f_variedad',VARIEDADES[$('#f_tipo').value],f.variedad,'Seleccionar variedad');readVariedad=setupOther('f_variedad')};
+  refreshVariedad();$('#f_tipo').onchange=()=>{f.variedad='';refreshVariedad()};
+  const refreshMunicipios=()=>{$('#municipios_lista').innerHTML=(MUNICIPIOS_BASE[$('#f_prov_cod').value]||[]).map(x=>`<option value="${esc(x)}"></option>`).join('')};refreshMunicipios();
+  $('#f_prov_cod').onchange=()=>{$('#f_municipio').value='';$('#f_mun_cod').value='';refreshMunicipios()};
+  const keys=['finca','propietarios','superficie','marco_a','marco_b','municipio','poligono','parcela','lat','lng'];
+  const read=()=>{keys.forEach(k=>f[k]=$('#f_'+k).value.trim());f.variedad=readVariedad();f.patron=readPatron();f.tipo=$('#f_tipo').value;f.prov_cod=$('#f_prov_cod').value||null;f.mun_cod=$('#f_mun_cod').value.trim()||null};
+  $('#sigref').onclick=()=>{read();if(!f.prov_cod||!f.mun_cod||!f.poligono||!f.parcela)return toast('Indica provincia, código municipal, polígono y parcela.');window.open(sigUrl(f),'_blank','noopener')};
+  $('#siggps').onclick=()=>{read();if(!hasGeo(f))return toast('Primero introduce coordenadas o usa GPS.');const u=new URL(SIG);Object.entries({x:f.lng,y:f.lat,srid:4326,r:400}).forEach(([k,v])=>u.searchParams.set(k,v));window.open(u.href,'_blank','noopener')};
+  ['superficie','marco_a','marco_b'].forEach(k=>$('#f_'+k).oninput=()=>{read();$('#arbs').value=arb(f)});
+  $('#gps').onclick=()=>{if(!navigator.geolocation)return toast('Este dispositivo no tiene geolocalización.');toast('Buscando tu posición…');
+    navigator.geolocation.getCurrentPosition(p=>{$('#f_lat').value=p.coords.latitude.toFixed(6);$('#f_lng').value=p.coords.longitude.toFixed(6);toast('Posición guardada (precisión ±'+Math.round(p.coords.accuracy)+' m).')},
+      e=>toast('No se pudo obtener la ubicación: activa el permiso de ubicación del navegador y el GPS del móvil.'),{enableHighAccuracy:true,timeout:20000})};
+  $('#pgb').onclick=()=>{const g=parseGeo($('#pg').value);if(!g)return toast('No encuentro coordenadas en ese texto.');$('#f_lat').value=g[0];$('#f_lng').value=g[1]};
+  if(!f.id)bindPicker();
+  $('#cn').onclick=()=>{view=f.id?'detail':'list';render()};
+  $('#ok').onclick=async()=>{read();if(!f.finca)return toast('Pon un nombre a la finca.');const b=$('#ok');b.disabled=true;b.textContent='Guardando…';
+    const row={finca:f.finca,propietarios:f.propietarios,variedad:f.variedad,patron:f.patron,superficie:num(f.superficie),marco_a:num(f.marco_a),marco_b:num(f.marco_b),municipio:f.municipio,poligono:f.poligono,parcela:f.parcela,lat:num(f.lat),lng:num(f.lng),prov_cod:f.prov_cod??null,mun_cod:f.mun_cod??null};
+    if(!navigator.onLine){if(pend.length||($('#f_nota')&&$('#f_nota').value.trim())){toast('Sin conexión: guarda primero la finca sin fotos ni anotación.');b.disabled=false;b.textContent='Guardar';return}const id=queueSave(f,row);if(id){cur=id;view='detail';render();toast('Guardada en este dispositivo. Se sincronizará al recuperar Internet.')}else{b.disabled=false;b.textContent='Guardar'}return}
+    try{let id=f.id;
+      if(id){const {error}=await sb.from('fincas').update(row).eq('id',id);if(error)throw error}
+      else{const {data,error}=await sb.from('fincas').insert(row).select().single();if(error)throw error;id=data.id;
+        const t=($('#f_nota')||{value:''}).value.trim();if(t||pend.length){const fotos=await uploadPhotos(id,pend);const r=await sb.from('anotaciones').insert({finca_id:id,texto:t,fotos});if(r.error)throw r.error;pend=[]}}
+      await load();cur=id;view='detail';render()}
+    catch(e){toast('No se pudo guardar: '+(e.message||e));b.disabled=false;b.textContent='Guardar'}};
+}
+// ---------- exportar ----------
+const fname=e=>'fincas'+(fv?'_'+fv:'')+(fm?'_'+fm:'')+'.'+e;
+function dl(name,blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name.replace(/\s+/g,'_');document.body.appendChild(a);a.click();a.remove()}
+function exportCsv(){const rows=filtered();if(!rows.length)return toast('No hay fincas con esos filtros.');
+  const cols=['finca','propietarios','variedad','patron','superficie_ha','marco_a','marco_b','arboles','municipio','poligono','parcela','latitud','longitud','ultima_visita'];
+  const c=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const L=[cols.join(';')].concat(rows.map(f=>[f.finca,f.propietarios,f.variedad,f.patron,f.superficie,f.marco_a,f.marco_b,arb(f),f.municipio,f.poligono,f.parcela,f.lat,f.lng,fmt(lastVisit(f))].map(c).join(';')));
+  dl(fname('csv'),new Blob(['\ufeff'+L.join('\n')],{type:'text/csv;charset=utf-8'}))}
+function exportPdf(){const rows=filtered();if(!rows.length)return toast('No hay fincas con esos filtros.');
+  const J=window.jspdf&&window.jspdf.jsPDF;if(!J)return toast('No se pudo cargar el generador de PDF.');
+  const d=new J({orientation:'landscape',unit:'mm',format:'a4'});
+  const C=[['Finca',38,f=>f.finca],['Propietarios',42,f=>f.propietarios],['Variedad',28,f=>f.variedad],['Patrón',28,f=>f.patron],['Sup. (ha)',14,f=>f.superficie],['Marco',18,f=>(f.marco_a&&f.marco_b)?f.marco_a+'x'+f.marco_b:''],['Árboles',18,f=>arb(f)],['Municipio',34,f=>f.municipio],['Pol./Parc.',20,f=>(f.poligono||'-')+'/'+(f.parcela||'-')],['Últ. visita',30,f=>fmt(lastVisit(f))]];
+  let y=0;
+  const head=()=>{d.setFontSize(14);d.setFont(undefined,'bold');d.text('Listado de fincas de cítricos',10,14);d.setFontSize(9);d.setFont(undefined,'normal');d.text('Variedad: '+(fv||'todas')+'   Municipio: '+(fm||'todos')+'   Fecha: '+new Date().toLocaleDateString('es-ES'),10,20);
+    y=25;d.setFillColor(47,125,50);d.rect(10,y,270,7,'F');d.setTextColor(255);d.setFont(undefined,'bold');let x=10;C.forEach(c=>{d.text(c[0],x+1,y+5);x+=c[1]});d.setTextColor(0);d.setFont(undefined,'normal');y+=7};
+  head();
+  rows.forEach((f,i)=>{const cells=C.map(c=>d.splitTextToSize(String(c[2](f)??''),c[1]-2)),h=Math.max(...cells.map(l=>l.length))*4+2;
+    if(y+h>196){d.addPage();head()}if(i%2===0){d.setFillColor(242,245,238);d.rect(10,y,270,h,'F')}
+    let x=10;cells.forEach((l,j)=>{d.text(l,x+1,y+4.5);x+=C[j][1]});y+=h});
+  const tot=rows.reduce((s,f)=>s+(+f.superficie||0),0),ta=rows.reduce((s,f)=>s+arb(f),0);
+  if(y+10>196){d.addPage();y=15}d.setFont(undefined,'bold');d.text(rows.length+' fincas  ·  '+tot.toFixed(2)+' ha  ·  '+ta.toLocaleString('es-ES')+' árboles',10,y+7);
+  dl(fname('pdf'),d.output('blob'))}
+</script></body></html>
