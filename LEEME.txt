@@ -1,4 +1,4 @@
-FINCAS 2.8 - pestaña Madurez
+FINCAS 2.9 - eliminar anotaciones y pruebas de madurez (la tabla madurez sigue necesitando el SQL de 2.8)
 
 ANTES DE USARLA, en Supabase -> SQL Editor -> New query -> Run (una sola vez):
 

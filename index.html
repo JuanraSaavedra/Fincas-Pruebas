@@ -250,9 +250,16 @@ function detail(app){
   ${parcelasDe(f).length?`<div style="margin-top:10px"><span class="mu">Parcelas (${parcelasDe(f).length}) · total ${(+f.superficie||0).toLocaleString('es-ES',{maximumFractionDigits:4})} ha</span>${parcelasDe(f).map((p,i)=>`<div class="note"><b>${i+1}.</b> Pol. ${esc(p.poligono||'—')} · Parc. ${esc(p.parcela||'—')}${p.recinto?' · Rec. '+esc(p.recinto):''}${num(p.superficie)?' · <b>'+esc(p.superficie)+' ha</b>':''}<div class="mu">${esc(p.municipio||'—')}${p.prov_cod?' ('+esc(nombreProv(p.prov_cod))+')':''}${num(p.lat)!=null?' · '+esc(p.lat)+', '+esc(p.lng):''}${p.prov_cod&&p.mun_cod&&p.poligono&&p.parcela?` · <a href="${sigUrl(p)}" target="_blank" rel="noopener">SIGPAC</a>`:''}</div></div>`).join('')}</div>`:''}
   <div class="row w" style="margin-top:12px">${hasGeo(f)?`<button class="s" id="vmap">📍 Mapa</button><a class="btn s" href="${mapsUrl(f)}" target="_blank" rel="noopener">Google Maps</a><a class="btn s" href="${satUrl(f)}" target="_blank" rel="noopener">🛰️ Satélite</a>`:''}<a class="btn s" href="${sigUrl(f)}" target="_blank" rel="noopener">🗺️ SIGPAC</a><button class="s" id="dmad">🧪 Madurez</button><button class="s" id="ed">✏️ Editar</button></div></div>
   <div class="card"><b>Anotaciones</b><textarea id="nt" rows="3" placeholder="Nueva anotación (se guarda con fecha y hora)…" style="margin-top:8px"></textarea>${pickerHtml()}<button id="add" style="margin-top:8px;width:100%">Añadir anotación</button>
-  ${notas.map(n=>`<div class="note"><small>📅 ${fmt(n.fecha)}</small><div>${esc(n.texto).replace(/\n/g,'<br>')}</div>${(n.fotos||[]).length?'<div class="ph">'+n.fotos.map(p=>`<img data-p="${esc(p)}" src="${urlCache[p]||''}">`).join('')+'</div>':''}</div>`).join('')||'<p class="mu">Sin anotaciones.</p>'}</div>
+  ${notas.map(n=>`<div class="note"><button class="s ndel" data-id="${n.id}" style="float:right;min-height:32px;padding:2px 10px">🗑</button><small>📅 ${fmt(n.fecha)}</small><div>${esc(n.texto).replace(/\n/g,'<br>')}</div>${(n.fotos||[]).length?'<div class="ph">'+n.fotos.map(p=>`<img data-p="${esc(p)}" src="${urlCache[p]||''}">`).join('')+'</div>':''}</div>`).join('')||'<p class="mu">Sin anotaciones.</p>'}</div>
   <button class="d" id="dl" style="width:100%">Eliminar finca</button>`;
   bindPicker();
+  app.querySelectorAll('.ndel').forEach(b=>{let armed=false;b.onclick=async()=>{
+    if(!armed){armed=true;b.textContent='¿Eliminar?';b.classList.remove('s');b.classList.add('d');setTimeout(()=>{armed=false;b.textContent='🗑';b.classList.remove('d');b.classList.add('s')},4000);return}
+    if(!navigator.onLine)return toast('Sin conexión: no se puede eliminar ahora.');
+    const n=notas.find(x=>x.id===b.dataset.id);if(!n)return;b.disabled=true;
+    const {error}=await sb.from('anotaciones').delete().eq('id',n.id);if(error){b.disabled=false;return toast('No se pudo eliminar: '+error.message)}
+    if((n.fotos||[]).length)await sb.storage.from('fotos').remove(n.fotos);
+    await load();render()}});
   const imgs=[...app.querySelectorAll('img[data-p]')];
   signed(imgs.map(i=>i.dataset.p)).then(()=>imgs.forEach(i=>{i.src=urlCache[i.dataset.p]||'';i.onclick=()=>lightbox(i.src)}));
   $('#ed').onclick=()=>{draft={...f};view='form';render()};$('#dmad').onclick=()=>{medit={finca_id:f.id,variedad:f.variedad||''};view='madform';render()};const vm=$('#vmap');if(vm)vm.onclick=()=>abrirMapa({modo:'ver',titulo:f.finca,fincas:[f]});
@@ -369,12 +376,17 @@ function mad(app){
   app.innerHTML=tabsHtml('mad')+`<div class="row"><select id="mfsel"><option value="">Todas las fincas</option>${fs.map(x=>option(x.id,x.finca,mf)).join('')}</select><button id="mnew" style="flex:0 0 auto">＋ Nueva</button></div>
   <p class="mu">${rows.length} ${rows.length===1?'prueba':'pruebas'}</p><div class="row"><button class="s" id="mcsv">CSV</button></div>
   ${mf?chartIM(rows):''}
-  ${rows.map(m=>{const c=mCalc(m);return`<div class="card item" data-id="${m.id}"><b>${esc(fincaDe(m.finca_id))}</b><div class="mu">${esc(m.variedad||'Sin variedad')} · ${fLarga(m.fecha)}</div>
+  ${rows.map(m=>{const c=mCalc(m);return`<div class="card item" data-id="${m.id}"><button class="s mdel" data-id="${m.id}" style="float:right;min-height:32px;padding:2px 10px">🗑</button><b>${esc(fincaDe(m.finca_id))}</b><div class="mu">${esc(m.variedad||'Sin variedad')} · ${fLarga(m.fecha)}</div>
    <span class="tag">Brix ${f1(num(m.brix),1)}</span><span class="tag">Acidez ${f1(c.ac,2)}</span><span class="tag"><b>I.M. ${f1(c.im,1)}</b></span><span class="tag">% Zumo ${f1(c.pz,1)}</span>${m.calibres?`<span class="tag">Calibres: ${esc(m.calibres)}</span>`:''}</div>`}).join('')||'<p class="mu">Todavía no hay pruebas.</p>'}`;
   bindTabs();
   $('#mfsel').onchange=e=>{mf=e.target.value;render()};
   $('#mnew').onclick=()=>{medit=mf?{finca_id:mf,variedad:(fincas.find(x=>x.id===mf)||{}).variedad||''}:{};view='madform';render()};
   app.querySelectorAll('.item').forEach(e=>e.onclick=()=>{medit=mads.find(x=>x.id===e.dataset.id);view='madform';render()});
+  app.querySelectorAll('.mdel').forEach(b=>{let armed=false;b.onclick=async ev=>{ev.stopPropagation();
+    if(!armed){armed=true;b.textContent='¿Eliminar?';b.classList.remove('s');b.classList.add('d');setTimeout(()=>{armed=false;b.textContent='🗑';b.classList.remove('d');b.classList.add('s')},4000);return}
+    if(!navigator.onLine)return toast('Sin conexión: no se puede eliminar ahora.');
+    b.disabled=true;const {error}=await sb.from('madurez').delete().eq('id',b.dataset.id);if(error){b.disabled=false;return toast('No se pudo eliminar: '+error.message)}
+    await loadMad();render()}});
   $('#mcsv').onclick=()=>{if(!rows.length)return toast('No hay pruebas con ese filtro.');const c=v=>'"'+String(v??'').replace(/"/g,'""')+'"',n=v=>v==null?'':String(v).replace('.',',');
     const L=[['fecha','finca','variedad','brix','sosa_ml','peso_muestra_g','peso_zumo_g','acidez','indice_madurez','pct_zumo','calibres'].join(';')].concat(rows.map(m=>{const k=mCalc(m);return[m.fecha,fincaDe(m.finca_id),m.variedad,n(m.brix),n(m.sosa_ml),n(m.peso_muestra),n(m.peso_zumo),k.ac==null?'':n(+k.ac.toFixed(3)),k.im==null?'':n(+k.im.toFixed(2)),k.pz==null?'':n(+k.pz.toFixed(2)),m.calibres].map(c).join(';')}));
     dl('madurez'+(mf?'_'+fincaDe(mf):'')+'.csv',new Blob(['\ufeff'+L.join('\n')],{type:'text/csv;charset=utf-8'}))};
