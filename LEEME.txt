@@ -32,3 +32,5 @@ FINCAS 2.10 + AUTOGUARDADO Y EXCEL
 - El navegador iOS puede suspender los temporizadores al pasar a segundo plano; no se garantiza ejecución en segundo plano.
 - Excel completo: fincas, parcelas, anotaciones, madurez e información; no incrusta fotos. Biblioteca XLSX externa requiere conexión al menos en la primera carga.
 - Antes de usar datos reales, probar con cuenta de pruebas y verificar políticas RLS de Supabase.
+
+Actualización 2.10.1: Excel exporta exclusivamente fincas y sus parcelas en una sola hoja, una fila por parcela; sin anotaciones ni madurez. Se mantiene autoguardado.
