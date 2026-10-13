@@ -1,36 +1,20 @@
-FINCAS 2.10 — AUTOGUARDADO Y EXPORTACIÓN EXCEL
-Basada en Fincas 2.9. Esta versión aún requiere pruebas reales.
+FINCAS 2.12 — PRUEBAS
 
-FINCAS 2.9 - eliminar anotaciones y pruebas de madurez (la tabla madurez sigue necesitando el SQL de 2.8)
+Base: Fincas 2.10.1 (con autoguardado y Excel de fincas y parcelas).
+Cambios:
+- Iconos 192/512 a partir del diseño de cítricos aprobado.
+- Título y versión 2.12.
+- Persistencia explícita de sesión Supabase: usuario y contraseña siguen siendo obligatorios en el primer acceso; en aperturas posteriores se recupera la sesión cuando es válida.
+- Pantalla de acceso modernizada y caché renovada.
 
-ANTES DE USARLA, en Supabase -> SQL Editor -> New query -> Run (una sola vez):
+PUBLICACIÓN
+Subir el CONTENIDO de esta carpeta a Fincas-Pruebas. No publicar config.js si contiene claves secretas (la clave pública anon de Supabase no sustituye las políticas RLS).
+Si el icono no cambia en iPhone, cerrar la PWA, retirar el icono anterior de inicio y volver a añadirla desde Safari.
 
-create table if not exists public.madurez (
-  id uuid primary key default gen_random_uuid(),
-  finca_id uuid references public.fincas(id) on delete cascade,
-  fecha date not null default current_date,
-  variedad text,
-  brix numeric,
-  sosa_ml numeric,
-  peso_muestra numeric,
-  peso_zumo numeric,
-  calibres text,
-  creado timestamptz not null default now()
-);
-alter table public.madurez enable row level security;
-drop policy if exists "madurez autenticados" on public.madurez;
-create policy "madurez autenticados" on public.madurez for all to authenticated using (true) with check (true);
-notify pgrst, 'reload schema';
+PRUEBAS
+1. Iniciar sesión y cerrar la app sin pulsar Salir; volver a abrir.
+2. Pulsar Salir y comprobar que solicita credenciales.
+3. Comprobar exportación Excel, formulario y autoguardado.
+4. Verificar con cuenta de prueba y reglas RLS antes de abrir al público.
 
-Formulas: % zumo = peso zumo / peso muestra x 100 ; acidez = ml sosa x 0,128 ; I.M. = brix / acidez
-
-
-FINCAS 2.10 + AUTOGUARDADO Y EXCEL
-- Borrador local al editar (aprox. 1 segundo después del último cambio).
-- Cada 5 minutos, con la ficha abierta y cambios pendientes, almacena los campos de finca y parcelas en cola local y trata de sincronizarlos con Supabase.
-- Fotografías y anotaciones requieren pulsar Guardar.
-- El navegador iOS puede suspender los temporizadores al pasar a segundo plano; no se garantiza ejecución en segundo plano.
-- Excel completo: fincas, parcelas, anotaciones, madurez e información; no incrusta fotos. Biblioteca XLSX externa requiere conexión al menos en la primera carga.
-- Antes de usar datos reales, probar con cuenta de pruebas y verificar políticas RLS de Supabase.
-
-Actualización 2.10.1: Excel exporta exclusivamente fincas y sus parcelas en una sola hoja, una fila por parcela; sin anotaciones ni madurez. Se mantiene autoguardado.
+NOTA: Los mockups promocionales no son capturas reales de esta versión.

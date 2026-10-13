@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f7d32"><link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>Fincas 2.10.1 · Cítricos</title>
+<title>Fincas 2.12 · Cítricos</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{--bg:#f6f7f2;--card:#fff;--tx:#1d2a1a;--mu:#6b7a66;--ac:#e8820c;--ac2:#2f7d32;--bd:#dde2d6;--dn:#c0392b}
@@ -41,6 +41,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid #55a77c;outline-offset
 .helper{font-size:12px;color:var(--mu);margin:5px 0 10px}
 @media(max-width:430px){main{padding:10px}.card{padding:14px}.row{flex-wrap:wrap}.row>*{min-width:0}}
 
+/* Fincas 2.12: identidad visual y acceso persistente */
+.login-card{max-width:440px;margin:32px auto;padding:26px;text-align:left}
+.login-card h2{text-align:center;font-size:26px}
+.login-card>.mu{text-align:center}
+.login-icon{display:block;width:116px;height:116px;border-radius:26px;object-fit:cover;margin:0 auto 16px;box-shadow:0 12px 28px #123b2928}
+header h1{display:flex;align-items:baseline;gap:7px}
 /* Mapa integrado */
 .toast{z-index:40}
 #mapov{position:fixed;inset:0;z-index:15;background:var(--bg);display:flex;flex-direction:column}
@@ -67,7 +73,7 @@ input::placeholder,textarea::placeholder{color:#7f9179}
 .mpan{background:var(--card)}
 }
 </style></head><body>
-<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.0</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
+<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.12</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
 <main id="app"></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -77,7 +83,7 @@ input::placeholder,textarea::placeholder{color:#7f9179}
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}});
 let mads=[],mf='',medit=null,fincas=[],view='login',cur=null,q='',fv='',fm='',draft=null,pend=[],urlCache={};
 const fmt=iso=>iso?new Date(iso).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):'—';
 const num=v=>{v=String(v??'').replace(',','.').trim();return v===''||isNaN(v)?null:+v};
@@ -219,7 +225,7 @@ function render(){
   if(view==='login')return login(app);if(view==='list')return list(app);if(view==='detail')return detail(app);if(view==='mad')return mad(app);if(view==='madform')return madform(app);form(app);
 }
 function login(app){
-  app.innerHTML=`<div class="card"><h2 style="margin:0">Acceso</h2><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
+  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.12</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
   const go=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
   $('#go').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};
 }
