@@ -1,20 +1,7 @@
-FINCAS 2.12 — PRUEBAS
+FINCAS 2.14 — MAPA Y UBICACIÓN
 
-Base: Fincas 2.10.1 (con autoguardado y Excel de fincas y parcelas).
-Cambios:
-- Iconos 192/512 a partir del diseño de cítricos aprobado.
-- Título y versión 2.12.
-- Persistencia explícita de sesión Supabase: usuario y contraseña siguen siendo obligatorios en el primer acceso; en aperturas posteriores se recupera la sesión cuando es válida.
-- Pantalla de acceso modernizada y caché renovada.
+Novedades: botón Reubicar GPS, Centrar, Ajustar marcador y Guardar ubicación en el mapa de edición de parcelas. Se puede arrastrar el marcador y guardar latitud/longitud sin modificar polígono/parcela. Consultar SIGPAC aquí realiza la consulta geográfica online.
 
-PUBLICACIÓN
-Subir el CONTENIDO de esta carpeta a Fincas-Pruebas. No publicar config.js si contiene claves secretas (la clave pública anon de Supabase no sustituye las políticas RLS).
-Si el icono no cambia en iPhone, cerrar la PWA, retirar el icono anterior de inicio y volver a añadirla desde Safari.
+Instalación: sustituir archivos en el repositorio Fincas-Pruebas, esperar despliegue y recargar. Haz copia de los datos antes de actualizar.
 
-PRUEBAS
-1. Iniciar sesión y cerrar la app sin pulsar Salir; volver a abrir.
-2. Pulsar Salir y comprobar que solicita credenciales.
-3. Comprobar exportación Excel, formulario y autoguardado.
-4. Verificar con cuenta de prueba y reglas RLS antes de abrir al público.
-
-NOTA: Los mockups promocionales no son capturas reales de esta versión.
+La precisión GPS depende del teléfono. Guardar ubicación modifica el formulario: para persistir en Supabase, pulsa Guardar en la ficha.

@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f7d32"><link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>Fincas 2.12 · Cítricos</title>
+<title>Fincas 2.13 · Cítricos</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{--bg:#f6f7f2;--card:#fff;--tx:#1d2a1a;--mu:#6b7a66;--ac:#e8820c;--ac2:#2f7d32;--bd:#dde2d6;--dn:#c0392b}
@@ -41,7 +41,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #55a77c;outline-offset
 .helper{font-size:12px;color:var(--mu);margin:5px 0 10px}
 @media(max-width:430px){main{padding:10px}.card{padding:14px}.row{flex-wrap:wrap}.row>*{min-width:0}}
 
-/* Fincas 2.12: identidad visual y acceso persistente */
+/* Fincas 2.14: identidad visual y acceso persistente */
 .login-card{max-width:440px;margin:32px auto;padding:26px;text-align:left}
 .login-card h2{text-align:center;font-size:26px}
 .login-card>.mu{text-align:center}
@@ -57,6 +57,10 @@ header h1{display:flex;align-items:baseline;gap:7px}
 .mpan .row{margin-top:8px}
 .pin{background:none;border:0}.pinx{position:absolute;left:-14px;top:-34px;font-size:30px;line-height:1;filter:drop-shadow(0 1px 2px #000)}
 .pint{position:absolute;left:14px;top:-30px;white-space:nowrap;background:#fffffff2;color:#111;border-radius:8px;padding:1px 7px;font-size:12px;font-weight:700;box-shadow:0 1px 4px #0007}
+.map-actions{position:absolute;right:12px;top:75px;z-index:1000;display:flex;flex-direction:column;gap:8px;max-width:175px}
+.map-actions button{background:#fff;color:#164c37;border:1px solid #c9d6cb;border-radius:12px;padding:9px;box-shadow:0 2px 9px #0004;font-size:13px;min-height:42px}
+.map-actions button.active{background:#1f754b;color:#fff}
+.map-coords{font-size:12px;overflow-wrap:anywhere;margin-top:5px}
 .row.w{flex-wrap:wrap}.row.w>*{flex:1 1 30%}
 
 /* Modo noche (sigue el ajuste del iPad) */
@@ -73,7 +77,7 @@ input::placeholder,textarea::placeholder{color:#7f9179}
 .mpan{background:var(--card)}
 }
 </style></head><body>
-<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.12</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
+<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.14</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
 <main id="app"></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -133,6 +137,22 @@ function sigUrl(f){
 const SIG_API='https://sigpac-hubcloud.es/servicioconsultassigpac/query/recinfobypoint/4326/';
 const SIG_WMS='https://wms.mapa.gob.es/sigpac/wms';
 async function sigPunto(lat,lng){const r=await fetch(SIG_API+lng.toFixed(7)+'/'+lat.toFixed(7)+'.json');if(!r.ok)throw Error('HTTP '+r.status);const d=await r.json();return Array.isArray(d)?d:[]}
+// GPS: recoger varias lecturas recientes y escoger la de menor incertidumbre.
+// La precisión indicada por el navegador es estimada; no sustituye una medición topográfica.
+function gpsPreciso({duracion=14000,umbral=20}={}){
+ return new Promise((resolve,reject)=>{
+  if(!navigator.geolocation)return reject(Error('Geolocalización no disponible'));
+  let best=null,watch=null,done=false;
+  const fin=(err)=>{if(done)return;done=true;clearTimeout(timer);if(watch!==null)navigator.geolocation.clearWatch(watch);if(best)resolve(best);else reject(err||Error('No se obtuvo posición GPS'));};
+  const timer=setTimeout(()=>fin(Error('Tiempo de espera GPS agotado')),duracion);
+  watch=navigator.geolocation.watchPosition(pos=>{
+   const a=pos.coords.accuracy;
+   if(!Number.isFinite(a)||!Number.isFinite(pos.coords.latitude)||!Number.isFinite(pos.coords.longitude))return;
+   if(!best||a<best.coords.accuracy)best=pos;
+   if(a<=umbral)fin();
+  },err=>{if(!best)fin(Error(err.message||'Error de GPS'))},{enableHighAccuracy:true,maximumAge:0,timeout:duracion});
+ });
+}
 function wktRings(w){const out=[],re=/\(([^()]+)\)/g;let m;while((m=re.exec(String(w||'')))){const ring=m[1].split(',').map(t=>{const [a,b]=t.trim().split(/\s+/).map(Number);return(a>20&&Math.abs(b)<20)?[a,b]:[b,a]}).filter(c=>c.every(Number.isFinite));if(ring.length>2)out.push(ring)}return out}
 const nombreProv=c=>(PROVINCIAS.find(x=>x[0]===c)||[,''])[1];
 function nombreMun(prov,mun){const m=municipiosINE.find(x=>x.provincia_id===prov&&String(x.cmun).padStart(3,'0')===mun);return m?m.nombre:''}
@@ -140,7 +160,7 @@ function abrirMapa(o){
   if(!window.L)return toast('No se pudo cargar el mapa. Comprueba la conexión a Internet.');
   const ov=document.createElement('div');ov.id='mapov';
   const elegir=o.modo==='elegir';
-  ov.innerHTML=`<div class="mtop"><b>${esc(o.titulo||'Mapa')}</b><button id="mgps">📍 Mi ubicación</button><button id="mx">✕</button></div><div id="mapa"></div><div class="mpan" id="mpan">${elegir?'<span class="mu">Toca la parcela en el mapa. Se rellenarán provincia, municipio, polígono, parcela y recinto.</span>':'<span class="mu">Toca una chincheta para ver la finca.</span>'}</div>`;
+  ov.innerHTML=`<div class="mtop"><b>${esc(o.titulo||'Mapa')}</b><button id="mx">✕</button></div><div id="mapa"></div><div class="map-actions"><button type="button" id="mgps">📍 Reubicar GPS</button><button type="button" id="mcentrar">🎯 Centrar</button>${elegir?'<button type="button" id="majustar">✋ Ajustar marcador</button><button type="button" id="mguardar">💾 Guardar ubicación</button>':''}</div><div class="mpan" id="mpan">${elegir?'<span class="mu">Toca la parcela en el mapa. Se rellenarán provincia, municipio, polígono, parcela y recinto.</span>':'<span class="mu">Toca una chincheta para ver la finca.</span>'}</div>`;
   document.body.appendChild(ov);
   const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:19,maxZoom:21,attribution:'Imágenes © Esri'});
   const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxNativeZoom:19,maxZoom:21,attribution:'© OpenStreetMap'});
@@ -151,18 +171,26 @@ function abrirMapa(o){
   $('#mx').onclick=cerrar;
   const panel=h=>{$('#mpan').innerHTML=h;setTimeout(()=>map.invalidateSize(),50)};
   // posición del usuario
-  let yo=null,yoc=null;
-  const ubicar=(centrar)=>{if(!navigator.geolocation)return toast('Este dispositivo no tiene geolocalización.');
-    navigator.geolocation.getCurrentPosition(p=>{const ll=[p.coords.latitude,p.coords.longitude];
+  let yo=null,yoc=null,ultimaGPS=null;
+  const ubicar=async(centrar)=>{
+    toast('Afinando GPS… espera unos segundos al aire libre.');
+    try{const p=await gpsPreciso();const ll=[p.coords.latitude,p.coords.longitude];ultimaGPS=ll;
       if(yo){yo.setLatLng(ll);yoc.setLatLng(ll).setRadius(p.coords.accuracy)}else{yoc=L.circle(ll,{radius:p.coords.accuracy,color:'#2a7de1',weight:1,fillOpacity:.12,interactive:false}).addTo(map);yo=L.circleMarker(ll,{radius:8,color:'#fff',weight:3,fillColor:'#2a7de1',fillOpacity:1,interactive:false}).addTo(map)}
       if(centrar)map.setView(ll,Math.max(map.getZoom(),18));
-    },()=>toast('No se pudo obtener tu ubicación. Activa el permiso de ubicación para esta web.'),{enableHighAccuracy:true,timeout:20000,maximumAge:0})};
+      toast('GPS: precisión estimada ±'+Math.round(p.coords.accuracy)+' m. Para elegir la parcela, toca su interior en el mapa.');
+    }catch(err){toast('GPS: '+err.message)}
+  };
   $('#mgps').onclick=()=>ubicar(true);
+  $('#mcentrar').onclick=()=>{if(ultimaGPS)map.setView(ultimaGPS,Math.max(map.getZoom(),18));else ubicar(true)};
   if(elegir){
-    let n=0,mk=null,poly=null;
-    if(o.lat!=null&&o.lng!=null){map.setView([o.lat,o.lng],18);mk=L.marker([o.lat,o.lng]).addTo(map);ubicar(false)}else ubicar(true);
-    map.on('click',async e=>{const id=++n,{lat,lng}=e.latlng;
-      if(mk)mk.setLatLng(e.latlng);else mk=L.marker(e.latlng).addTo(map);
+    let n=0,mk=null,poly=null,ajustando=false;
+    const asegurarMarcador=ll=>{if(mk)mk.setLatLng(ll);else mk=L.marker(ll,{draggable:true}).addTo(map);mk.dragging.enable();if(!mk._fincasDragBound){mk.on('dragend',()=>informarPos());mk._fincasDragBound=true}return mk};
+    const informarPos=()=>{if(!mk)return panel('<span class="mu">Toca el mapa o pulsa Reubicar GPS para seleccionar una posición.</span>');const ll=mk.getLatLng();panel(`<b>📍 Ubicación seleccionada</b><div class="map-coords">${ll.lat.toFixed(7)}, ${ll.lng.toFixed(7)}</div><div class="mu">Arrastra el marcador o toca el mapa para corregir la posición. Pulsa «Guardar ubicación» para conservar estas coordenadas sin cambiar la referencia SIGPAC.</div><div class="row"><button id="mconsultar">🗺️ Consultar SIGPAC aquí</button></div>`);$('#mconsultar').onclick=()=>consultarSigpac(ll)};
+    $('#majustar').onclick=()=>{ajustando=!ajustando;$('#majustar').classList.toggle('active',ajustando);$('#majustar').textContent=ajustando?'✓ Ajustando':'✋ Ajustar marcador';if(mk)mk.dragging.enable();informarPos()};
+    $('#mguardar').onclick=()=>{if(!mk)return toast('Primero selecciona una ubicación en el mapa.');const ll=mk.getLatLng();if(typeof o.onCoords!=='function')return toast('No se puede guardar en esta pantalla.');o.onCoords({lat:ll.lat,lng:ll.lng});cerrar()};
+    if(o.lat!=null&&o.lng!=null){map.setView([o.lat,o.lng],18);asegurarMarcador([o.lat,o.lng]);ubicar(false)}else ubicar(true);
+    const consultarSigpac=async ({lat,lng})=>{const id=++n;
+      asegurarMarcador([lat,lng]);
       if(poly){map.removeLayer(poly);poly=null}
       panel('<span class="mu">Consultando SIGPAC…</span>');
       try{const d=await sigPunto(lat,lng);if(id!==n)return;
@@ -175,7 +203,12 @@ function abrirMapa(o){
         $('#mno').onclick=()=>panel('<span class="mu">Toca otra parcela en el mapa.</span>');
         $('#mok').onclick=()=>{cerrar();o.onPick(P)};
       }catch(err){if(id===n)panel('<b>No se pudo consultar SIGPAC</b><div class="mu">Comprueba la conexión e inténtalo de nuevo ('+esc(err.message||err)+').</div>')}
-    });
+    };
+    map.on('click',e=>{asegurarMarcador(e.latlng);if(ajustando)informarPos();else consultarSigpac(e.latlng)});
+    map.on('layeradd',()=>{});
+    // Arrastrar no modifica SIGPAC hasta que el usuario solicite una consulta.
+    const prepararArrastre=()=>{if(mk&&!mk._fincasDragBound){mk.on('dragend',informarPos);mk._fincasDragBound=true}};
+    map.on('click',()=>prepararArrastre());prepararArrastre();
   }else{
     const pts=[],items=[];
     (o.fincas||[]).forEach(f=>{const all=parcelasDe(f),conGeo=all.filter(p=>num(p.lat)!=null&&num(p.lng)!=null);
@@ -225,7 +258,7 @@ function render(){
   if(view==='login')return login(app);if(view==='list')return list(app);if(view==='detail')return detail(app);if(view==='mad')return mad(app);if(view==='madform')return madform(app);form(app);
 }
 function login(app){
-  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.12</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
+  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.13</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
   const go=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
   $('#go').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};
 }
@@ -336,10 +369,17 @@ function form(app){
     else if(e.target.classList.contains('pv_mun')){p.municipio=e.target.value;const m=buscarMunicipio(p.prov_cod,p.municipio);if(m)p.mun_cod=String(m.cmun);draw()}});
   box.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const c=b.closest('.pc'),i=+c.dataset.i,p=ps[i];
     if(b.classList.contains('pdel')){ps.splice(i,1);draw()}
-    else if(b.classList.contains('pgps')){if(!navigator.geolocation)return toast('Este dispositivo no tiene geolocalización.');toast('Buscando tu posición…');
-      navigator.geolocation.getCurrentPosition(pos=>{p.lat=pos.coords.latitude.toFixed(6);p.lng=pos.coords.longitude.toFixed(6);draw();toast('Posición guardada (precisión ±'+Math.round(pos.coords.accuracy)+' m).')},()=>toast('No se pudo obtener la ubicación: activa el permiso de ubicación del navegador.'),{enableHighAccuracy:true,timeout:20000})}
-    else if(b.classList.contains('pmap')){abrirMapa({modo:'elegir',titulo:'Toca la parcela '+(i+1),lat:num(p.lat),lng:num(p.lng),onPick:P=>{
-      Object.assign(p,{prov_cod:P.prov,mun_cod:P.mun,municipio:P.munNombre||'',poligono:String(P.poligono),parcela:String(P.parcela),recinto:String(P.recinto),superficie:P.superficie!=null?String(+(+P.superficie).toFixed(4)):p.superficie,lat:P.lat.toFixed(6),lng:P.lng.toFixed(6)});
+    else if(b.classList.contains('pgps')){
+      toast('Afinando posición GPS… mantén el móvil al aire libre.');
+      gpsPreciso().then(pos=>{
+        const a=Math.round(pos.coords.accuracy);
+        if(a>35&&!confirm('La precisión GPS estimada es de ±'+a+' metros. Puede situarte en otra parcela. ¿Guardar estas coordenadas igualmente?'))return;
+        p.lat=pos.coords.latitude.toFixed(7);p.lng=pos.coords.longitude.toFixed(7);
+        draw();toast('Coordenadas GPS guardadas (precisión estimada ±'+a+' m). Comprueba la parcela en el mapa SIGPAC.');
+      }).catch(err=>toast('No se pudo obtener GPS: '+err.message));
+    }
+    else if(b.classList.contains('pmap')){abrirMapa({modo:'elegir',titulo:'Toca la parcela '+(i+1),lat:num(p.lat),lng:num(p.lng),onCoords:coords=>{p.lat=coords.lat.toFixed(7);p.lng=coords.lng.toFixed(7);draw();toast('Ubicación de parcela '+(i+1)+' corregida. Pulsa Guardar para confirmar los cambios.');},onPick:P=>{
+      Object.assign(p,{prov_cod:P.prov,mun_cod:P.mun,municipio:P.munNombre||'',poligono:String(P.poligono),parcela:String(P.parcela),recinto:String(P.recinto),superficie:P.superficie!=null?String(+(+P.superficie).toFixed(4)):p.superficie,lat:P.lat.toFixed(7),lng:P.lng.toFixed(7)});
       draw();toast('Parcela '+(i+1)+': pol. '+P.poligono+', parc. '+P.parcela+', rec. '+P.recinto+(P.superficie!=null?' · '+(+P.superficie).toFixed(4)+' ha':'')+(P.munNombre?'':' · elige el municipio de la lista')+'. Pulsa Guardar.')}})}});
   $('#addp').onclick=()=>{const l=ps[ps.length-1]||{};ps.push({...vacia(),prov_cod:l.prov_cod||''});draw();const cs=box.querySelectorAll('.pc');cs[cs.length-1].scrollIntoView({behavior:'smooth',block:'center'})};
   cargarCatalogoMunicipios().then(()=>{if($('#parcelas_box'))draw()});
