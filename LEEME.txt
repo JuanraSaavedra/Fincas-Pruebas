@@ -1,14 +1,7 @@
-FINCAS 2.15 — MAPA Y UBICACIÓN
+Fincas 2.16 — Mapa conjunto y exportación Google Earth (KML).
 
-Novedades: botón Reubicar GPS, Centrar, Ajustar marcador y Guardar ubicación en el mapa de edición de parcelas. Se puede arrastrar el marcador y guardar latitud/longitud sin modificar polígono/parcela. Consultar SIGPAC aquí realiza la consulta geográfica online.
-
-Instalación: sustituir archivos en el repositorio Fincas-Pruebas, esperar despliegue y recargar. Haz copia de los datos antes de actualizar.
-
-La precisión GPS depende del teléfono. Guardar ubicación modifica el formulario: para persistir en Supabase, pulsa Guardar en la ficha.
-
-NOVEDADES 2.15:
-- Identifica el uso SIGPAC de los recintos devueltos por la consulta por punto y permite añadir los CI (Cítricos).
-- Bloquea referencias repetidas dentro de la misma finca (provincia, municipio, polígono, parcela, recinto), incluso al guardar manualmente.
-- Incluye el uso SIGPAC en la ficha y en el Excel.
-LIMITACIÓN IMPORTANTE: la consulta SIGPAC por punto no devuelve necesariamente TODOS los recintos de una parcela. Se indica expresamente en el mapa; hay que revisar que no falten recintos CI.
-- La comprobación de duplicados es local a la ficha; no se ha creado una restricción de unicidad en Supabase.
+Sustituye los archivos de GitHub Pages. Conserva config.js con tu configuración actual.
+Mapa: colores por finca, puntos y contornos de recintos cuando SIGPAC devuelve WKT.
+Google Earth: exporta KML de todas las fincas o de una finca. Cuando no se obtiene geometría SIGPAC, se exporta un punto.
+La consulta de geometría requiere Internet; no garantiza todos los contornos.
+No se ha probado con datos SIGPAC reales ni en iPhone.
