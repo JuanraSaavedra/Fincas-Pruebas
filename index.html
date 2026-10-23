@@ -76,14 +76,17 @@ input::placeholder,textarea::placeholder{color:#7f9179}
 .ph img,.pvi img{border-color:var(--bd)}
 .mpan{background:var(--card)}
 }
-/* Herramientas de inicio: 2 filas, iconos compactos, activación en dos toques */
-.home-tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0 4px}
-.home-tools button.s{width:100%;min-width:0;min-height:48px;padding:5px 3px;font-size:23px;line-height:1.2;border-radius:12px}
-.home-tools button.armed{outline:3px solid var(--ac);background:#fff1d9;color:#183c2d}
+/* Herramientas de inicio y madurez: iconos compactos, activación en dos toques */
+.home-tools,.mad-tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0 4px}
+.home-tools button.s,.mad-tools button.s{width:100%;min-width:0;min-height:48px;padding:5px 3px;font-size:23px;line-height:1.2;border-radius:12px}
+.home-tools button.armed,.mad-tools button.armed{outline:3px solid var(--ac);background:#fff1d9;color:#183c2d}
+/* Etiquetas cortas siempre visibles debajo del icono, sin alterar los dos toques */
+.home-tools button.s,.mad-tools button.s{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:59px;padding:6px 2px 5px;font-size:23px}
+.home-tools button.s::after,.mad-tools button.s::after{content:attr(data-label);display:block;font-size:10px;line-height:1.15;font-weight:600;letter-spacing:0;white-space:nowrap}
 .home-tools .fi{position:absolute}
-@media(max-width:370px){.home-tools{gap:5px}.home-tools button.s{font-size:21px}}
+@media(max-width:370px){.home-tools{gap:5px}.home-tools button.s,.mad-tools button.s{font-size:21px}}
 </style></head><body>
-<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.19</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
+<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.21</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
 <main id="app"></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -325,7 +328,7 @@ function render(){
   if(view==='login')return login(app);if(view==='list')return list(app);if(view==='detail')return detail(app);if(view==='mad')return mad(app);if(view==='madform')return madform(app);form(app);
 }
 function login(app){
-  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.19</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
+  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.21</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
   const go=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
   $('#go').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};
 }
@@ -336,7 +339,7 @@ function list(app){
   const rows=filtered(),tot=rows.reduce((s,f)=>s+(+f.superficie||0),0),ta=rows.reduce((s,f)=>s+arb(f),0);
   app.innerHTML=tabsHtml('list')+`<div class="row"><input id="q" placeholder="Buscar…" value="${esc(q)}"><button id="new" style="flex:0 0 auto">＋ Nueva</button></div>${filtersHtml()}
   <p class="mu">${pendingSync.length?'⏳ '+pendingSync.length+' cambios por sincronizar · ':''}${rows.length} fincas · ${tot.toFixed(2)} ha · ${ta.toLocaleString('es-ES')} árboles</p>
-  <div class="home-tools" aria-label="Herramientas; toca una vez para ver el nombre y otra para ejecutar"><button class="s" id="mapall" title="Mapa de mis fincas" aria-label="Mapa de mis fincas">🗺️</button><button class="s" id="kmlall" title="Exportar a Google Earth" aria-label="Exportar a Google Earth">🌎</button><button class="s" id="pdf" title="Informe PDF de fincas" aria-label="Informe PDF de fincas">📄</button><button class="s" id="csv" title="Exportar CSV" aria-label="Exportar CSV">📋</button><button class="s" id="excel" title="Exportar Excel" aria-label="Exportar Excel">📗</button><button class="s" id="backup" title="Copia de seguridad" aria-label="Copia de seguridad">🛡️</button><button class="s" id="restore" title="Recuperar copia de seguridad" aria-label="Recuperar copia de seguridad">♻️</button><button class="s" id="helpTools" title="Ayuda sobre herramientas" aria-label="Ayuda sobre herramientas">❔</button><input class="fi" type="file" id="restorefile" accept=".json,application/json"></div><p class="mu" style="margin:4px 0 0">PDF y CSV incluyen solo las fincas filtradas. Excel incluye todas las fincas y parcelas.</p>`+
+  <div class="home-tools" aria-label="Herramientas; toca una vez para ver el nombre y otra para ejecutar"><button class="s" id="mapall" data-label="Mapa" title="Mapa de mis fincas" aria-label="Mapa de mis fincas">🗺️</button><button class="s" id="kmlall" data-label="Earth" title="Exportar a Google Earth" aria-label="Exportar a Google Earth">🌎</button><button class="s" id="pdf" data-label="PDF" title="Informe PDF de fincas" aria-label="Informe PDF de fincas">📄</button><button class="s" id="csv" data-label="CSV" title="Exportar CSV" aria-label="Exportar CSV">📋</button><button class="s" id="excel" data-label="Excel" title="Exportar Excel" aria-label="Exportar Excel">📗</button><button class="s" id="backup" data-label="Copia" title="Copia de seguridad" aria-label="Copia de seguridad">🛡️</button><button class="s" id="restore" data-label="Restaurar" title="Recuperar copia de seguridad" aria-label="Recuperar copia de seguridad">♻️</button><button class="s" id="helpTools" data-label="Ayuda" title="Ayuda sobre herramientas" aria-label="Ayuda sobre herramientas">❔</button><input class="fi" type="file" id="restorefile" accept=".json,application/json"></div><p class="mu" style="margin:4px 0 0">PDF y CSV incluyen solo las fincas filtradas. Excel incluye todas las fincas y parcelas.</p>`+
   (rows.map(f=>{const lv=lastVisit(f);return`<div class="card item" data-id="${f.id}"><b>${esc(f.finca)}</b><div class="mu">${esc(f.propietarios)}</div>
    <span class="tag">${esc(f.variedad||'—')}</span>${f.patron?`<span class="tag">Patrón: ${esc(f.patron)}</span>`:''}<span class="tag">${f.superficie||0} ha</span><span class="tag">${arb(f).toLocaleString('es-ES')} árboles</span><span class="tag">${esc(munis(f).join(', '))}</span>
    <div class="mu" style="margin-top:6px">Última visita: ${fmt(lv)}</div></div>`}).join('')||'<p class="mu">No hay fincas con esos criterios.</p>');
@@ -541,7 +544,7 @@ function chartIM(rows){const pts=[...rows].reverse().map(m=>({d:m.fecha,v:mCalc(
 function mad(app){
   const rows=mads.filter(m=>!mf||m.finca_id===mf),fs=[...fincas].sort((a,b)=>(a.finca||'').localeCompare(b.finca||''));
   app.innerHTML=tabsHtml('mad')+`<div class="row"><select id="mfsel"><option value="">Todas las fincas</option>${fs.map(x=>option(x.id,x.finca,mf)).join('')}</select><button id="mnew" style="flex:0 0 auto">＋ Nueva</button></div>
-  <p class="mu">${rows.length} ${rows.length===1?'prueba':'pruebas'}</p><div class="row"><button class="s" id="mcsv">CSV</button><button class="s" id="mpdf">📄 PDF muestras seleccionadas</button><button class="s" id="mall">☑ Seleccionar todas</button></div><p class="mu">Marca las muestras que quieras incluir en un único informe PDF. Se respetará el filtro de finca.</p>
+  <p class="mu">${rows.length} ${rows.length===1?'prueba':'pruebas'}</p><div class="mad-tools" aria-label="Herramientas de madurez: primer toque muestra el nombre, segundo ejecuta"><button class="s" id="mcsv" data-label="CSV" title="Exportar CSV de madurez" aria-label="Exportar CSV de madurez">📋</button><button class="s" id="mpdf" data-label="PDF" title="PDF de muestras seleccionadas" aria-label="PDF de muestras seleccionadas">📄</button><button class="s" id="mall" data-label="Marcar" title="Seleccionar o deseleccionar todas las muestras" aria-label="Seleccionar o deseleccionar todas las muestras">☑️</button><button class="s" id="mhelp" data-label="Ayuda" title="Ayuda de madurez" aria-label="Ayuda de madurez">❔</button></div><p class="mu">Selecciona muestras para incluirlas en un PDF. Primer toque: nombre del icono; segundo toque: ejecutar.</p>
   ${mf?chartIM(rows):''}
   ${rows.map(m=>{const c=mCalc(m);return`<div class="card item" data-id="${m.id}"><label style="display:inline-flex;align-items:center;gap:7px;margin-bottom:7px"><input type="checkbox" class="mcheck" data-id="${m.id}" style="width:20px;height:20px"> Incluir en PDF</label><br><button class="s mdel" data-id="${m.id}" style="float:right;min-height:32px;padding:2px 10px">🗑</button><b>${esc(fincaDe(m.finca_id))}</b><div class="mu">Propietario: ${esc(propietarioDe(m.finca_id))}</div><div class="mu">${esc(m.variedad||'Sin variedad')} · ${fLarga(m.fecha)}</div>
    <span class="tag">Brix ${f1(num(m.brix),1)}</span><span class="tag">Acidez ${f1(c.ac,2)}</span><span class="tag"><b>I.M. ${f1(c.im,1)}</b></span><span class="tag">% Zumo ${f1(c.pz,1)}</span>${m.calibres?`<span class="tag">Calibres: ${esc(m.calibres)}</span>`:''}</div>`}).join('')||'<p class="mu">Todavía no hay pruebas.</p>'}`;
@@ -549,7 +552,7 @@ function mad(app){
   $('#mfsel').onchange=e=>{mf=e.target.value;render()};
   $('#mnew').onclick=()=>{medit=mf?{finca_id:mf,variedad:(fincas.find(x=>x.id===mf)||{}).variedad||''}:{};view='madform';render()};
   app.querySelectorAll('.item').forEach(e=>e.onclick=ev=>{if(ev.target.closest('label, input, button'))return;medit=mads.find(x=>x.id===e.dataset.id);view='madform';render()});
-  $('#mall').onclick=()=>{const checks=[...app.querySelectorAll('.mcheck')];const all=checks.every(c=>c.checked);checks.forEach(c=>c.checked=!all);$('#mall').textContent=all?'☑ Seleccionar todas':'☐ Quitar selección'};
+  $('#mall').onclick=()=>{const checks=[...app.querySelectorAll('.mcheck')];const all=checks.every(c=>c.checked);checks.forEach(c=>c.checked=!all);$('#mall').textContent=all?'☑️':'☐'};
   $('#mpdf').onclick=()=>{const ids=new Set([...app.querySelectorAll('.mcheck:checked')].map(x=>x.dataset.id));if(!ids.size)return toast('Selecciona al menos una muestra para el informe PDF.');exportMadPdf(rows.filter(m=>ids.has(String(m.id))))};
   app.querySelectorAll('.mdel').forEach(b=>{let armed=false;b.onclick=async ev=>{ev.stopPropagation();
     if(!armed){armed=true;b.textContent='¿Eliminar?';b.classList.remove('s');b.classList.add('d');setTimeout(()=>{armed=false;b.textContent='🗑';b.classList.remove('d');b.classList.add('s')},4000);return}
@@ -559,6 +562,14 @@ function mad(app){
   $('#mcsv').onclick=()=>{if(!rows.length)return toast('No hay pruebas con ese filtro.');const c=v=>'"'+String(v??'').replace(/"/g,'""')+'"',n=v=>v==null?'':String(v).replace('.',',');
     const L=[['fecha','finca','propietario','variedad','brix','sosa_ml','peso_muestra_g','peso_zumo_g','acidez','indice_madurez','pct_zumo','calibres'].join(';')].concat(rows.map(m=>{const k=mCalc(m);return[m.fecha,fincaDe(m.finca_id),propietarioDe(m.finca_id),m.variedad,n(m.brix),n(m.sosa_ml),n(m.peso_muestra),n(m.peso_zumo),k.ac==null?'':n(+k.ac.toFixed(3)),k.im==null?'':n(+k.im.toFixed(2)),k.pz==null?'':n(+k.pz.toFixed(2)),m.calibres].map(c).join(';')}));
     dl('madurez'+(mf?'_'+fincaDe(mf):'')+'.csv',new Blob(['\ufeff'+L.join('\n')],{type:'text/csv;charset=utf-8'}))};
+  // Herramientas de madurez: primera pulsación informa; segunda ejecuta (6 segundos).
+  let madArmed=null,madTimer=null;
+  const madNames={mcsv:'Exportar CSV de madurez',mpdf:'Crear PDF con las muestras seleccionadas',mall:'Seleccionar o quitar todas las muestras',mhelp:'Ayuda de herramientas de madurez'};
+  const clearMad=()=>{if(madArmed)madArmed.classList.remove('armed');madArmed=null;clearTimeout(madTimer)};
+  Object.entries(madNames).forEach(([id,name])=>{const btn=$('#'+id),action=btn.onclick;btn.onclick=ev=>{
+    if(madArmed!==btn){clearMad();madArmed=btn;btn.classList.add('armed');toast(name+'. Vuelve a tocar para continuar.');madTimer=setTimeout(clearMad,6000);return}
+    clearMad();if(id==='mhelp'){toast('📋 CSV · 📄 PDF de muestras marcadas · ☑️ Seleccionar todas · ❔ Ayuda');return}if(action)action.call(btn,ev)
+  }});
 }
 function exportMadPdf(selected){
   const J=window.jspdf&&window.jspdf.jsPDF;
@@ -583,6 +594,7 @@ function madform(app){
   const I=(id,l,v)=>`<div><label>${l}</label><input id="${id}" inputmode="decimal" value="${esc(v??'')}"></div>`;
   app.innerHTML=`<div class="card"><h2 style="margin:0">${m.id?'Editar prueba':'Nueva prueba de madurez'}</h2>
   <div class="row"><div><label>Fecha</label><input id="m_fecha" type="date" value="${esc(m.fecha||hoy)}"></div><div><label>Finca</label><select id="m_finca"><option value="">Sin finca</option>${fs.map(x=>option(x.id,x.finca,m.finca_id)).join('')}</select></div></div>
+  <div class="note" style="margin:10px 0" aria-live="polite"><b>👤 Propietario:</b> <span id="m_propietario">${esc(m.finca_id?propietarioDe(m.finca_id):'Selecciona una finca')}</span></div>
   <label>Variedad</label><select id="m_var">${varOpts(m.variedad||'')}</select>
   <div class="row">${I('m_brix','Brix',m.brix)}${I('m_sosa','Sosa (ml)',m.sosa_ml)}</div>
   <div class="row">${I('m_pm','Peso muestra (g)',m.peso_muestra)}${I('m_pz','Peso zumo (g)',m.peso_zumo)}</div>
@@ -592,7 +604,7 @@ function madform(app){
   ${m.id?'<button class="d" id="m_dl" style="width:100%;margin-top:10px">Eliminar prueba</button>':''}`;
   const upd=()=>{const c=mCalc({brix:$('#m_brix').value,sosa_ml:$('#m_sosa').value,peso_muestra:$('#m_pm').value,peso_zumo:$('#m_pz').value});$('#r_ac').textContent=f1(c.ac,2);$('#r_im').textContent=f1(c.im,1);$('#r_pz').textContent=f1(c.pz,1)};
   ['m_brix','m_sosa','m_pm','m_pz'].forEach(i=>$('#'+i).oninput=upd);upd();
-  $('#m_finca').onchange=e=>{const fx=fincas.find(x=>x.id===e.target.value);if(fx&&fx.variedad)$('#m_var').innerHTML=varOpts(fx.variedad)};
+  $('#m_finca').onchange=e=>{const fx=fincas.find(x=>String(x.id)===String(e.target.value));$('#m_propietario').textContent=fx?(fx.propietarios||'Sin propietario'):'Selecciona una finca';if(fx&&fx.variedad)$('#m_var').innerHTML=varOpts(fx.variedad)};
   $('#m_cn').onclick=()=>{view='mad';medit=null;render()};
   $('#m_ok').onclick=async()=>{if(!navigator.onLine)return toast('Sin conexión: no se puede guardar la prueba. Inténtalo cuando tengas Internet.');
     const row={fecha:$('#m_fecha').value||hoy,finca_id:$('#m_finca').value||null,variedad:$('#m_var').value||null,brix:num($('#m_brix').value),sosa_ml:num($('#m_sosa').value),peso_muestra:num($('#m_pm').value),peso_zumo:num($('#m_pz').value),calibres:$('#m_cal').value.trim()||null};

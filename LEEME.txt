@@ -1,1 +1,1 @@
-Fincas 2.19: informe PDF de índices de madurez con selección múltiple de muestras. Conserva las funciones anteriores. Sustituir archivos de GitHub Pages; no borrar Supabase. Probar en iPhone antes de uso productivo.
+Fincas 2.21: propietario visible en el formulario de pruebas de madurez y barra de iconos de doble toque en registros de madurez. Mantiene funcionalidades anteriores.
