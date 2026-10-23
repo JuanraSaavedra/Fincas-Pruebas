@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f7d32"><link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>Fincas 2.13 · Cítricos</title>
+<title>Fincas 2.18 · Cítricos</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{--bg:#f6f7f2;--card:#fff;--tx:#1d2a1a;--mu:#6b7a66;--ac:#e8820c;--ac2:#2f7d32;--bd:#dde2d6;--dn:#c0392b}
@@ -77,7 +77,7 @@ input::placeholder,textarea::placeholder{color:#7f9179}
 .mpan{background:var(--card)}
 }
 </style></head><body>
-<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.16</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
+<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.18</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
 <main id="app"></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -319,7 +319,7 @@ function render(){
   if(view==='login')return login(app);if(view==='list')return list(app);if(view==='detail')return detail(app);if(view==='mad')return mad(app);if(view==='madform')return madform(app);form(app);
 }
 function login(app){
-  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.13</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
+  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.18</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
   const go=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
   $('#go').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};
 }
@@ -330,14 +330,14 @@ function list(app){
   const rows=filtered(),tot=rows.reduce((s,f)=>s+(+f.superficie||0),0),ta=rows.reduce((s,f)=>s+arb(f),0);
   app.innerHTML=tabsHtml('list')+`<div class="row"><input id="q" placeholder="Buscar…" value="${esc(q)}"><button id="new" style="flex:0 0 auto">＋ Nueva</button></div>${filtersHtml()}
   <p class="mu">${pendingSync.length?'⏳ '+pendingSync.length+' cambios por sincronizar · ':''}${rows.length} fincas · ${tot.toFixed(2)} ha · ${ta.toLocaleString('es-ES')} árboles</p>
-  <div class="row"><button class="s" id="mapall">🌍 Mapa de mis fincas</button><button class="s" id="kmlall">🌎 Google Earth (KML)</button><button class="s" id="pdf">📄 PDF</button><button class="s" id="csv">CSV</button><button class="s" id="excel">📗 Excel fincas y parcelas</button></div><p class="mu" style="margin:4px 0 0">PDF y CSV incluyen solo las fincas filtradas. Excel incluye todas las fincas y parcelas.</p>`+
+  <div class="row"><button class="s" id="mapall">🌍 Mapa de mis fincas</button><button class="s" id="kmlall">🌎 Google Earth (KML)</button><button class="s" id="pdf">📄 PDF</button><button class="s" id="csv">CSV</button><button class="s" id="excel">📗 Excel fincas y parcelas</button><button class="s" id="backup">🛡️ Copia de seguridad</button><button class="s" id="restore">♻️ Recuperar copia</button><input class="fi" type="file" id="restorefile" accept=".json,application/json"></div><p class="mu" style="margin:4px 0 0">PDF y CSV incluyen solo las fincas filtradas. Excel incluye todas las fincas y parcelas.</p>`+
   (rows.map(f=>{const lv=lastVisit(f);return`<div class="card item" data-id="${f.id}"><b>${esc(f.finca)}</b><div class="mu">${esc(f.propietarios)}</div>
    <span class="tag">${esc(f.variedad||'—')}</span>${f.patron?`<span class="tag">Patrón: ${esc(f.patron)}</span>`:''}<span class="tag">${f.superficie||0} ha</span><span class="tag">${arb(f).toLocaleString('es-ES')} árboles</span><span class="tag">${esc(munis(f).join(', '))}</span>
    <div class="mu" style="margin-top:6px">Última visita: ${fmt(lv)}</div></div>`}).join('')||'<p class="mu">No hay fincas con esos criterios.</p>');
   $('#fv').onchange=e=>{fv=e.target.value;render()};$('#fm').onchange=e=>{fm=e.target.value;render()};
   $('#q').oninput=e=>{q=e.target.value;const p=e.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(p,p)};
   $('#new').onclick=()=>{cur=null;draft={};pend=[];view='form';render()};bindTabs();
-  $('#pdf').onclick=exportPdf;$('#csv').onclick=exportCsv;$('#excel').onclick=exportExcel;$('#mapall').onclick=()=>abrirMapa({modo:'ver',titulo:'Mapa de fincas ('+rows.length+')',fincas:rows});$('#kmlall').onclick=()=>exportKml(rows);
+  $('#pdf').onclick=exportPdf;$('#csv').onclick=exportCsv;$('#excel').onclick=exportExcel;$('#backup').onclick=exportBackup;$('#restore').onclick=()=>$('#restorefile').click();$('#restorefile').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(file)await restoreBackup(file)};$('#mapall').onclick=()=>abrirMapa({modo:'ver',titulo:'Mapa de fincas ('+rows.length+')',fincas:rows});$('#kmlall').onclick=()=>exportKml(rows);
   app.querySelectorAll('.item').forEach(e=>e.onclick=()=>{cur=e.dataset.id;view='detail';render()});
 }
 function detail(app){
@@ -525,14 +525,16 @@ function chartIM(rows){const pts=[...rows].reverse().map(m=>({d:m.fecha,v:mCalc(
 function mad(app){
   const rows=mads.filter(m=>!mf||m.finca_id===mf),fs=[...fincas].sort((a,b)=>(a.finca||'').localeCompare(b.finca||''));
   app.innerHTML=tabsHtml('mad')+`<div class="row"><select id="mfsel"><option value="">Todas las fincas</option>${fs.map(x=>option(x.id,x.finca,mf)).join('')}</select><button id="mnew" style="flex:0 0 auto">＋ Nueva</button></div>
-  <p class="mu">${rows.length} ${rows.length===1?'prueba':'pruebas'}</p><div class="row"><button class="s" id="mcsv">CSV</button></div>
+  <p class="mu">${rows.length} ${rows.length===1?'prueba':'pruebas'}</p><div class="row"><button class="s" id="mcsv">CSV</button><button class="s" id="mpdf">📄 PDF muestras seleccionadas</button><button class="s" id="mall">☑ Seleccionar todas</button></div><p class="mu">Marca las muestras que quieras incluir en un único informe PDF. Se respetará el filtro de finca.</p>
   ${mf?chartIM(rows):''}
-  ${rows.map(m=>{const c=mCalc(m);return`<div class="card item" data-id="${m.id}"><button class="s mdel" data-id="${m.id}" style="float:right;min-height:32px;padding:2px 10px">🗑</button><b>${esc(fincaDe(m.finca_id))}</b><div class="mu">${esc(m.variedad||'Sin variedad')} · ${fLarga(m.fecha)}</div>
+  ${rows.map(m=>{const c=mCalc(m);return`<div class="card item" data-id="${m.id}"><label style="display:inline-flex;align-items:center;gap:7px;margin-bottom:7px"><input type="checkbox" class="mcheck" data-id="${m.id}" style="width:20px;height:20px"> Incluir en PDF</label><br><button class="s mdel" data-id="${m.id}" style="float:right;min-height:32px;padding:2px 10px">🗑</button><b>${esc(fincaDe(m.finca_id))}</b><div class="mu">${esc(m.variedad||'Sin variedad')} · ${fLarga(m.fecha)}</div>
    <span class="tag">Brix ${f1(num(m.brix),1)}</span><span class="tag">Acidez ${f1(c.ac,2)}</span><span class="tag"><b>I.M. ${f1(c.im,1)}</b></span><span class="tag">% Zumo ${f1(c.pz,1)}</span>${m.calibres?`<span class="tag">Calibres: ${esc(m.calibres)}</span>`:''}</div>`}).join('')||'<p class="mu">Todavía no hay pruebas.</p>'}`;
   bindTabs();
   $('#mfsel').onchange=e=>{mf=e.target.value;render()};
   $('#mnew').onclick=()=>{medit=mf?{finca_id:mf,variedad:(fincas.find(x=>x.id===mf)||{}).variedad||''}:{};view='madform';render()};
-  app.querySelectorAll('.item').forEach(e=>e.onclick=()=>{medit=mads.find(x=>x.id===e.dataset.id);view='madform';render()});
+  app.querySelectorAll('.item').forEach(e=>e.onclick=ev=>{if(ev.target.closest('label, input, button'))return;medit=mads.find(x=>x.id===e.dataset.id);view='madform';render()});
+  $('#mall').onclick=()=>{const checks=[...app.querySelectorAll('.mcheck')];const all=checks.every(c=>c.checked);checks.forEach(c=>c.checked=!all);$('#mall').textContent=all?'☑ Seleccionar todas':'☐ Quitar selección'};
+  $('#mpdf').onclick=()=>{const ids=new Set([...app.querySelectorAll('.mcheck:checked')].map(x=>x.dataset.id));if(!ids.size)return toast('Selecciona al menos una muestra para el informe PDF.');exportMadPdf(rows.filter(m=>ids.has(String(m.id))))};
   app.querySelectorAll('.mdel').forEach(b=>{let armed=false;b.onclick=async ev=>{ev.stopPropagation();
     if(!armed){armed=true;b.textContent='¿Eliminar?';b.classList.remove('s');b.classList.add('d');setTimeout(()=>{armed=false;b.textContent='🗑';b.classList.remove('d');b.classList.add('s')},4000);return}
     if(!navigator.onLine)return toast('Sin conexión: no se puede eliminar ahora.');
@@ -541,6 +543,23 @@ function mad(app){
   $('#mcsv').onclick=()=>{if(!rows.length)return toast('No hay pruebas con ese filtro.');const c=v=>'"'+String(v??'').replace(/"/g,'""')+'"',n=v=>v==null?'':String(v).replace('.',',');
     const L=[['fecha','finca','variedad','brix','sosa_ml','peso_muestra_g','peso_zumo_g','acidez','indice_madurez','pct_zumo','calibres'].join(';')].concat(rows.map(m=>{const k=mCalc(m);return[m.fecha,fincaDe(m.finca_id),m.variedad,n(m.brix),n(m.sosa_ml),n(m.peso_muestra),n(m.peso_zumo),k.ac==null?'':n(+k.ac.toFixed(3)),k.im==null?'':n(+k.im.toFixed(2)),k.pz==null?'':n(+k.pz.toFixed(2)),m.calibres].map(c).join(';')}));
     dl('madurez'+(mf?'_'+fincaDe(mf):'')+'.csv',new Blob(['\ufeff'+L.join('\n')],{type:'text/csv;charset=utf-8'}))};
+}
+function exportMadPdf(selected){
+  const J=window.jspdf&&window.jspdf.jsPDF;
+  if(!J)return toast('No se pudo cargar la librería PDF. Comprueba la conexión.');
+  if(!selected.length)return toast('No hay muestras seleccionadas.');
+  const doc=new J({orientation:'landscape',unit:'mm',format:'a4'});
+  const ordered=[...selected].sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||''))||fincaDe(a.finca_id).localeCompare(fincaDe(b.finca_id)));
+  const cols=[['Fecha',24,m=>fLarga(m.fecha)],['Finca',42,m=>fincaDe(m.finca_id)],['Variedad',40,m=>m.variedad||''],['Brix',17,m=>f1(num(m.brix),1)],['Acidez',20,m=>f1(mCalc(m).ac,2)],['I. madurez',23,m=>f1(mCalc(m).im,2)],['% zumo',20,m=>f1(mCalc(m).pz,1)],['Peso muestra',24,m=>f1(num(m.peso_muestra),1)],['Peso zumo',24,m=>f1(num(m.peso_zumo),1)],['Calibres',39,m=>m.calibres||'']];
+  let y=0,page=0;
+  const head=()=>{page++;doc.setTextColor(25,55,35);doc.setFont('helvetica','bold');doc.setFontSize(16);doc.text('Informe de índices de madurez',10,15);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text('Fecha del informe: '+new Date().toLocaleDateString('es-ES')+'    Muestras seleccionadas: '+ordered.length,10,22);y=28;doc.setFillColor(43,114,58);doc.rect(10,y,273,9,'F');doc.setTextColor(255);doc.setFont('helvetica','bold');doc.setFontSize(8);let x=10;cols.forEach(([t,w])=>{doc.text(t,x+1,y+6);x+=w});doc.setTextColor(0);doc.setFont('helvetica','normal');y+=9};
+  head();
+  ordered.forEach((m,i)=>{const cells=cols.map(([,w,fn])=>doc.splitTextToSize(String(fn(m)??''),w-3));const h=Math.max(9,Math.max(...cells.map(c=>c.length))*4.1+3);if(y+h>188){doc.addPage();head()}if(i%2===0){doc.setFillColor(243,247,241);doc.rect(10,y,273,h,'F')}let x=10;doc.setFontSize(8);cells.forEach((lines,j)=>{doc.text(lines,x+1,y+5);x+=cols[j][1]});y+=h});
+  if(y+20>189){doc.addPage();head()}
+  const ims=ordered.map(m=>mCalc(m).im).filter(v=>v!=null&&Number.isFinite(v));
+  doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('Resumen: '+ordered.length+' muestras'+(ims.length?'  |  I. madurez medio: '+f1(ims.reduce((a,b)=>a+b,0)/ims.length,2):''),10,y+10);
+  const pages=doc.getNumberOfPages();for(let i=1;i<=pages;i++){doc.setPage(i);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(90);doc.text('Fincas · Informe de madurez  |  Página '+i+' de '+pages,283,204,{align:'right'})}
+  const date=new Date().toISOString().slice(0,10);dl('Informe_madurez_'+date+'.pdf',doc.output('blob'));
 }
 function madform(app){
   const m=medit||{},d=new Date(),hoy=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -568,6 +587,49 @@ function madform(app){
     await loadMad();medit=null;view='mad';render()};
   const dd=$('#m_dl');if(dd){let armed=false;dd.onclick=async()=>{if(!armed){armed=true;dd.textContent='Pulsa otra vez para confirmar';setTimeout(()=>{armed=false;dd.textContent='Eliminar prueba'},4000);return}
     const {error}=await sb.from('madurez').delete().eq('id',m.id);if(error)return toast('Error: '+error.message);await loadMad();medit=null;view='mad';render()}}
+}
+// ---------- copia de seguridad completa de registros (sin binarios de fotos) ----------
+const BACKUP_FORMAT='fincas-respaldo',BACKUP_VERSION=1;
+const BACKUP_FIELDS=['finca','propietarios','variedad','patron','superficie','marco_a','marco_b','municipio','poligono','parcela','recinto','lat','lng','prov_cod','mun_cod','parcelas'];
+function safeBackupRow(obj,fields){return Object.fromEntries(fields.filter(k=>Object.prototype.hasOwnProperty.call(obj,k)).map(k=>[k,obj[k]]))}
+async function allBackupRows(table,selection='*'){
+  const result=[];for(let offset=0;offset<100000;offset+=500){const {data,error}=await sb.from(table).select(selection).range(offset,offset+499);if(error)throw Error(table+': '+error.message);result.push(...(data||[]));if(!data||data.length<500)return result}
+  throw Error('Demasiados registros; no se ha generado una copia incompleta.');
+}
+async function exportBackup(){
+  if(!navigator.onLine)return toast('Conéctate a Internet para obtener una copia completa del servidor.');
+  if(pendingSync.length)return toast('Hay cambios sin sincronizar. Espera a que se sincronicen antes de crear la copia.');
+  const btn=$('#backup');if(btn){btn.disabled=true;btn.textContent='Preparando copia…'}
+  try{
+    const {data:{user}}=await sb.auth.getUser();if(!user)throw Error('Inicia sesión.');
+    const [fs,ns,ms]=await Promise.all([allBackupRows('fincas'),allBackupRows('anotaciones'),allBackupRows('madurez')]);
+    const payload={formato:BACKUP_FORMAT,version:BACKUP_VERSION,fecha:new Date().toISOString(),usuario:user.id,contenido:{fincas:fs,anotaciones:ns,madurez:ms},aviso:'Las fotos se incluyen solo como referencias de almacenamiento; sus archivos de imagen no están dentro de este JSON.'};
+    const name='Fincas_respaldo_'+new Date().toISOString().slice(0,10)+'.json';
+    dl(name,new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'}));
+    toast('Copia descargada: '+fs.length+' fincas, '+ns.length+' anotaciones y '+ms.length+' pruebas. Guarda el JSON en Archivos/iCloud.');
+  }catch(e){alert('No se pudo generar la copia completa. No se ha descargado un archivo parcial.\n'+e.message)}
+  finally{if(btn){btn.disabled=false;btn.textContent='🛡️ Copia de seguridad'}}
+}
+async function restoreBackup(file){
+  if(!navigator.onLine)return toast('Para recuperar datos debes estar conectado a Internet.');
+  if(pendingSync.length)return toast('Sincroniza primero los cambios pendientes.');
+  try{
+    if(file.size>25*1024*1024)throw Error('Archivo demasiado grande (máximo 25 MB).');
+    const doc=JSON.parse(await file.text());
+    if(doc.formato!==BACKUP_FORMAT||doc.version!==BACKUP_VERSION||!doc.contenido||!['fincas','anotaciones','madurez'].every(k=>Array.isArray(doc.contenido[k])))throw Error('Este archivo no es una copia compatible de Fincas.');
+    const {data:{user}}=await sb.auth.getUser();if(!user)throw Error('Debes iniciar sesión.');
+    if(doc.usuario!==user.id)throw Error('La copia pertenece a otra cuenta. Inicia sesión en la cuenta original.');
+    const fs=doc.contenido.fincas,ns=doc.contenido.anotaciones,ms=doc.contenido.madurez;
+    if(fs.length>10000||ns.length>100000||ms.length>100000)throw Error('El archivo excede los límites admitidos.');
+    if(!confirm('Recuperar copia del '+new Date(doc.fecha).toLocaleString('es-ES')+'\n'+fs.length+' fincas · '+ns.length+' anotaciones · '+ms.length+' pruebas.\n\nSolo se añadirán registros que no existan; NO se sustituirán registros actuales. ¿Continuar?'))return;
+    const [liveF,liveN,liveM]=await Promise.all([allBackupRows('fincas','id'),allBackupRows('anotaciones','id'),allBackupRows('madurez','id')]);
+    const seenF=new Set(liveF.map(x=>x.id)),seenN=new Set(liveN.map(x=>x.id)),seenM=new Set(liveM.map(x=>x.id));
+    let countF=0,countN=0,countM=0;
+    for(const f of fs){if(!f||typeof f.id!=='string'||seenF.has(f.id))continue;const row={id:f.id,...safeBackupRow(f,BACKUP_FIELDS)};const {error}=await sb.from('fincas').insert(row);if(error)throw Error('Finca '+(f.finca||f.id)+': '+error.message);seenF.add(f.id);countF++}
+    for(const n of ns){if(!n||typeof n.id!=='string'||seenN.has(n.id)||!seenF.has(n.finca_id))continue;const row={id:n.id,finca_id:n.finca_id,...safeBackupRow(n,['fecha','texto','fotos'])};const {error}=await sb.from('anotaciones').insert(row);if(error)throw Error('Anotación '+n.id+': '+error.message);seenN.add(n.id);countN++}
+    for(const m of ms){if(!m||typeof m.id!=='string'||seenM.has(m.id)||(m.finca_id&&!seenF.has(m.finca_id)))continue;const row={id:m.id,...safeBackupRow(m,['fecha','finca_id','variedad','brix','sosa_ml','peso_muestra','peso_zumo','calibres'])};const {error}=await sb.from('madurez').insert(row);if(error)throw Error('Madurez '+m.id+': '+error.message);seenM.add(m.id);countM++}
+    await load();view='list';render();alert('Recuperación terminada.\nAñadidas: '+countF+' fincas, '+countN+' anotaciones y '+countM+' pruebas.\n\nLas fotografías no se restauran desde este archivo: solo se conservan sus referencias.');
+  }catch(e){await load();render();alert('Recuperación interrumpida: '+e.message+'\nLos registros ya recuperados permanecen guardados. Puedes volver a importar el mismo archivo para continuar.');}
 }
 // ---------- exportar ----------
 const fname=e=>'fincas'+(fv?'_'+fv:'')+(fm?'_'+fm:'')+'.'+e;

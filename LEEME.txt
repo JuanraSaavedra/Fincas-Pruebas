@@ -1,7 +1,1 @@
-Fincas 2.16 — Mapa conjunto y exportación Google Earth (KML).
-
-Sustituye los archivos de GitHub Pages. Conserva config.js con tu configuración actual.
-Mapa: colores por finca, puntos y contornos de recintos cuando SIGPAC devuelve WKT.
-Google Earth: exporta KML de todas las fincas o de una finca. Cuando no se obtiene geometría SIGPAC, se exporta un punto.
-La consulta de geometría requiere Internet; no garantiza todos los contornos.
-No se ha probado con datos SIGPAC reales ni en iPhone.
+Fincas 2.18: informe PDF de índices de madurez con selección múltiple de muestras. Conserva las funciones anteriores. Sustituir archivos de GitHub Pages; no borrar Supabase. Probar en iPhone antes de uso productivo.
