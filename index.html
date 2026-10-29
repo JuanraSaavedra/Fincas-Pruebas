@@ -371,8 +371,18 @@ function abrirCompartirFinca(f){
           d.setFillColor(248,250,252);d.roundedRect(margin,y-3,usable,boxH+13,2,2,'F');
           const sx=boxW/Math.max(maxX-minX,1e-8),sy=boxH/Math.max(maxY-minY,1e-8),scale=Math.min(sx,sy);
           const ox=margin+7+(boxW-(maxX-minX)*scale)/2,oy=y+4+(boxH-(maxY-minY)*scale)/2;
-          d.setDrawColor(24,110,86);d.setLineWidth(.45);
-          contours.forEach((entry,i)=>entry.rings.forEach(r=>{for(let j=1;j<r.length;j++){const a=r[j-1],b=r[j],ax=ox+(a[1]*Math.cos(lat0*Math.PI/180)-minX)*scale,bx=ox+(b[1]*Math.cos(lat0*Math.PI/180)-minX)*scale,ay=oy+boxH-(a[0]-minY)*scale,by=oy+boxH-(b[0]-minY)*scale;d.line(ax,ay,bx,by)}}));
+          // Rellenos suaves por parcela, con borde contrastado y sin ocultar la geometría SIGPAC.
+          const colores=[[192,226,206],[205,225,242],[243,224,187],[223,213,238],[211,234,225],[245,215,211]];
+          d.setDrawColor(32,91,76);d.setLineWidth(.5);
+          contours.forEach((entry,i)=>entry.rings.forEach(r=>{
+            if(!Array.isArray(r)||r.length<3)return;
+            const points=r.map(c=>[ox+(c[1]*Math.cos(lat0*Math.PI/180)-minX)*scale,oy+boxH-(c[0]-minY)*scale]);
+            const first=points[0],segments=[];
+            for(let j=1;j<points.length;j++)segments.push([points[j][0]-points[j-1][0],points[j][1]-points[j-1][1]]);
+            if(Math.hypot(points.at(-1)[0]-first[0],points.at(-1)[1]-first[1])>.01)segments.push([first[0]-points.at(-1)[0],first[1]-points.at(-1)[1]]);
+            d.setFillColor(...colores[i%colores.length]);
+            d.lines(segments,first[0],first[1],[1,1],'FD',true);
+          }));
           y+=boxH+15;d.setFontSize(8);d.setTextColor(90);d.text('Croquis orientativo de los recintos obtenidos de SIGPAC; no sustituye un plano oficial.',margin,y);y+=10;d.setTextColor(30);
           if(contours.length<pp.length)line('Aviso',`Contornos disponibles: ${contours.length} de ${pp.length} recintos. El croquis puede estar incompleto.`);
         }
