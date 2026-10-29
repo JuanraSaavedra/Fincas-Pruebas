@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f7d32"><link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>Fincas 2.23 · Cítricos</title>
+<title>Fincas 2.24 · Cítricos</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{--bg:#f6f7f2;--card:#fff;--tx:#1d2a1a;--mu:#6b7a66;--ac:#e8820c;--ac2:#2f7d32;--bd:#dde2d6;--dn:#c0392b}
@@ -87,7 +87,7 @@ input::placeholder,textarea::placeholder{color:#7f9179}
 .home-tools .fi{position:absolute}
 @media(max-width:370px){.home-tools,.mad-tools{gap:5px}.home-tools .tool-label,.mad-tools .tool-label{font-size:10px}}
 </style></head><body>
-<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.23</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
+<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.24</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
 <main id="app"></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -320,6 +320,38 @@ function pickerHtml(){return `<div class="row" style="margin-top:8px"><label cla
 function pv(){const el=$('#pv');if(!el)return;el.innerHTML=pend.map((f,i)=>`<span class="pvi"><img src="${URL.createObjectURL(f)}"><b data-i="${i}">×</b></span>`).join('');el.querySelectorAll('b').forEach(x=>x.onclick=()=>{pend.splice(+x.dataset.i,1);pv()})}
 function bindPicker(){const add=e=>{pend.push(...e.target.files);e.target.value='';pv()};$('#phc').onchange=add;$('#phg').onchange=add;pv()}
 function lightbox(u){if(!u)return;const d=document.createElement('div');d.className='lb';d.innerHTML='<img src="'+u+'">';d.onclick=()=>d.remove();document.body.appendChild(d)}
+
+// ---------- compartir una finca en PDF (sin alterar los datos originales) ----------
+function abrirCompartirFinca(f){
+  const campos=[
+    ['finca','Nombre de la finca'],['propietarios','Propietarios'],['variedad','Variedad'],['patron','Patrón'],
+    ['superficie','Superficie (ha)'],['marco','Marco de plantación'],['arboles','Número de árboles'],
+    ['municipio','Término municipal'],['parcelas','Detalle de parcelas'],['coordenadas','Coordenadas GPS']
+  ];
+  const ov=document.createElement('div');ov.className='ov';ov.style.cssText='position:fixed;inset:0;background:#0009;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto';
+  ov.innerHTML=`<section style="background:var(--card,#fff);color:var(--text,#222);border-radius:16px;padding:18px;max-width:520px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px #0005"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><h2 style="margin:0">📤 Compartir finca</h2><button type="button" id="shareClose" class="s">✕</button></div><p class="mu">Elige los datos que quieres incluir en el PDF de <b>${esc(f.finca||'Finca')}</b>.</p><b>Datos generales</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0">${campos.map((c,i)=>`<label style="display:flex;gap:8px;align-items:flex-start;font-weight:normal"><input type="checkbox" class="share-field" value="${c[0]}" ${i<8?'checked':''} style="width:auto;margin-top:3px">${c[1]}</label>`).join('')}</div><hr><label style="display:flex;gap:8px;align-items:center;font-weight:normal"><input id="shareNotes" type="checkbox" checked style="width:auto"> Incluir anotaciones</label><label style="display:flex;gap:8px;align-items:center;font-weight:normal;margin-top:8px"><input id="sharePhotos" type="checkbox" style="width:auto"> Incluir fotografías</label><p class="mu" style="font-size:12px">Las fotos se incorporan al PDF si están seleccionadas. Solo se incluyen los apartados marcados.</p><button type="button" id="shareGenerate" style="width:100%;margin-top:12px">📄 Generar PDF</button><div id="shareStatus" class="mu" style="margin-top:8px"></div></section>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();ov.querySelector('#shareClose').onclick=close;ov.addEventListener('click',e=>{if(e.target===ov)close()});
+  ov.querySelector('#shareGenerate').onclick=async()=>{
+    const btn=ov.querySelector('#shareGenerate'),statusEl=ov.querySelector('#shareStatus');btn.disabled=true;btn.textContent='Preparando PDF…';
+    try{
+      const J=window.jspdf&&window.jspdf.jsPDF;if(!J)throw new Error('No se ha podido cargar el generador PDF. Comprueba la conexión.');
+      const selected=[...ov.querySelectorAll('.share-field:checked')].map(x=>x.value),withNotes=ov.querySelector('#shareNotes').checked,withPhotos=ov.querySelector('#sharePhotos').checked;
+      const d=new J({orientation:'portrait',unit:'mm',format:'a4'}),margin=15,pageW=210,pageH=297;let y=20;
+      const safe=v=>String(v??'').trim()||'—';
+      const line=(label,value)=>{if(!selected.length)return;const lines=d.splitTextToSize(label+': '+safe(value),pageW-margin*2);if(y+lines.length*5+4>pageH-15){d.addPage();y=18}d.setFont('helvetica','bold');d.text(label+':',margin,y);d.setFont('helvetica','normal');const labW=Math.min(d.getTextWidth(label+': ')+1,48);d.text(d.splitTextToSize(safe(value),pageW-margin*2-labW),margin+labW,y);y+=Math.max(6,lines.length*5+1)};
+      d.setFont('helvetica','bold');d.setFontSize(18);d.text('Informe de finca',margin,y);y+=8;d.setFontSize(12);d.text(safe(f.finca),margin,y);y+=6;d.setFont('helvetica','normal');d.setFontSize(9);d.setTextColor(100);d.text('Generado el '+new Date().toLocaleString('es-ES'),margin,y);d.setTextColor(0);y+=9;
+      const values={finca:f.finca,propietarios:f.propietarios,variedad:f.variedad,patron:f.patron,superficie:(f.superficie??'')+' ha',marco:f.marco_a&&f.marco_b?f.marco_a+' × '+f.marco_b+' m':'—',arboles:arb(f).toLocaleString('es-ES'),municipio:munis(f).join(', '),parcelas:parcelasDe(f).map((p,i)=>`${i+1}. Pol. ${p.poligono||'—'}, Parc. ${p.parcela||'—'}${p.recinto?' , Rec. '+p.recinto:''}${p.municipio?' · '+p.municipio:''}${p.superficie?' · '+p.superficie+' ha':''}`).join('\n'),coordenadas:hasGeo(f)?`${f.lat}, ${f.lng}`:parcelasDe(f).filter(p=>p.lat!=null&&p.lng!=null).map(p=>`${p.lat}, ${p.lng}`).join(' · ')};
+      if(selected.length){d.setFontSize(11);d.setFont('helvetica','bold');d.text('Datos generales',margin,y);y+=7;d.setFontSize(10);selected.forEach(k=>line(campos.find(c=>c[0]===k)?.[1]||k,values[k]));y+=2}
+      const notes=[...(f.anotaciones||[])].sort((a,b)=>String(a.fecha||'')<String(b.fecha||'')?1:-1);
+      if(withNotes){if(y+12>pageH-15){d.addPage();y=18}d.setFontSize(12);d.setFont('helvetica','bold');d.text('Anotaciones',margin,y);y+=7;d.setFontSize(10);d.setFont('helvetica','normal');if(!notes.length){d.text('Sin anotaciones.',margin,y);y+=6}for(const n of notes){const txt=(n.texto||'').trim()||'(Sin texto)';const lines=d.splitTextToSize(fmt(n.fecha)+' · '+txt,pageW-margin*2);if(y+lines.length*4.8>pageH-15){d.addPage();y=18}d.text(lines,margin,y);y+=lines.length*4.8+4;
+          if(withPhotos&&(n.fotos||[]).length){const paths=n.fotos||[];await signed(paths);for(const path of paths){try{let url=urlCache[path];if(!url){const {data}=await sb.storage.from('fotos').createSignedUrl(path,3600);url=data?.signedUrl}if(!url)continue;const response=await fetch(url);if(!response.ok)continue;const blob=await response.blob();const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});const props=d.getImageProperties(dataUrl),maxW=pageW-margin*2,maxH=95,scale=Math.min(maxW/props.width,maxH/props.height),w=props.width*scale,h=props.height*scale;if(y+h>pageH-15){d.addPage();y=18}d.addImage(dataUrl,props.fileType||'JPEG',margin,y,w,h);y+=h+5}catch(err){console.warn('No se pudo incluir una fotografía',err)}}}
+        }} else if(withPhotos){statusEl.textContent='Para incluir fotografías, marca también “Incluir anotaciones”; las fotos están asociadas a cada anotación.';btn.disabled=false;btn.textContent='📄 Generar PDF';return}
+      const clean=(f.finca||'Finca').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9_-]+/g,'_');d.save('Informe_'+clean+'_'+new Date().toISOString().slice(0,10)+'.pdf');statusEl.textContent='PDF generado. Ya puedes compartirlo desde las opciones de tu dispositivo.';btn.textContent='PDF generado ✓';setTimeout(close,1200);
+    }catch(e){console.error(e);statusEl.textContent='No se pudo generar el PDF: '+(e.message||e);btn.disabled=false;btn.textContent='📄 Reintentar'}
+  };
+}
+
 // ---------- vistas ----------
 function render(){
   const app=$('#app'),hb=$('#hb');status();
@@ -368,7 +400,7 @@ function detail(app){
   <div><span>Marco plantación</span>${f.marco_a||'?'} × ${f.marco_b||'?'} m</div><div><span>Árboles</span>${arb(f).toLocaleString('es-ES')}</div>
   <div style="grid-column:1/3"><span>Término municipal</span>${esc(munis(f).join(', '))||'—'}</div></div>
   ${parcelasDe(f).length?`<div style="margin-top:10px"><span class="mu">Parcelas (${parcelasDe(f).length}) · total ${(+f.superficie||0).toLocaleString('es-ES',{maximumFractionDigits:4})} ha</span>${parcelasDe(f).map((p,i)=>`<div class="note"><b>${i+1}.</b> Pol. ${esc(p.poligono||'—')} · Parc. ${esc(p.parcela||'—')}${p.recinto?' · Rec. '+esc(p.recinto):''}${p.uso_sigpac?' · Uso '+esc(p.uso_sigpac):''}${num(p.superficie)?' · <b>'+esc(p.superficie)+' ha</b>':''}<div class="mu">${esc(p.municipio||'—')}${p.prov_cod?' ('+esc(nombreProv(p.prov_cod))+')':''}${num(p.lat)!=null?' · '+esc(p.lat)+', '+esc(p.lng):''}${p.prov_cod&&p.mun_cod&&p.poligono&&p.parcela?` · <a href="${sigUrl(p)}" target="_blank" rel="noopener">SIGPAC</a>`:''}</div></div>`).join('')}</div>`:''}
-  <div class="row w" style="margin-top:12px">${hasGeo(f)?`<button class="s" id="vmap">📍 Mapa</button><a class="btn s" href="${mapsUrl(f)}" target="_blank" rel="noopener">Google Maps</a><a class="btn s" href="${satUrl(f)}" target="_blank" rel="noopener">🛰️ Satélite</a>`:''}<a class="btn s" href="${sigUrl(f)}" target="_blank" rel="noopener">🗺️ SIGPAC</a><button class="s" id="vkml">🌎 Google Earth</button><button class="s" id="dmad">🧪 Madurez</button><button class="s" id="ed">✏️ Editar</button></div></div>
+  <div class="row w" style="margin-top:12px">${hasGeo(f)?`<button class="s" id="vmap">📍 Mapa</button><a class="btn s" href="${mapsUrl(f)}" target="_blank" rel="noopener">Google Maps</a><a class="btn s" href="${satUrl(f)}" target="_blank" rel="noopener">🛰️ Satélite</a>`:''}<a class="btn s" href="${sigUrl(f)}" target="_blank" rel="noopener">🗺️ SIGPAC</a><button class="s" id="vkml">🌎 Google Earth</button><button class="s" id="shareFinca">📤 Compartir finca (PDF)</button><button class="s" id="dmad">🧪 Madurez</button><button class="s" id="ed">✏️ Editar</button></div></div>
   <div class="card"><b>Anotaciones</b><textarea id="nt" rows="3" placeholder="Nueva anotación (se guarda con fecha y hora)…" style="margin-top:8px"></textarea>${pickerHtml()}<button id="add" style="margin-top:8px;width:100%">Añadir anotación</button>
   ${notas.map(n=>`<div class="note"><button class="s ndel" data-id="${n.id}" style="float:right;min-height:32px;padding:2px 10px">🗑</button><small>📅 ${fmt(n.fecha)}</small><div>${esc(n.texto).replace(/\n/g,'<br>')}</div>${(n.fotos||[]).length?'<div class="ph">'+n.fotos.map(p=>`<img data-p="${esc(p)}" src="${urlCache[p]||''}">`).join('')+'</div>':''}</div>`).join('')||'<p class="mu">Sin anotaciones.</p>'}</div>
   <button class="d" id="dl" style="width:100%">Eliminar finca</button>`;
@@ -382,7 +414,7 @@ function detail(app){
     await load();render()}});
   const imgs=[...app.querySelectorAll('img[data-p]')];
   signed(imgs.map(i=>i.dataset.p)).then(()=>imgs.forEach(i=>{i.src=urlCache[i.dataset.p]||'';i.onclick=()=>lightbox(i.src)}));
-  $('#ed').onclick=()=>{draft={...f};view='form';render()};$('#dmad').onclick=()=>{medit={finca_id:f.id,variedad:f.variedad||''};view='madform';render()};const vm=$('#vmap');if(vm)vm.onclick=()=>abrirMapa({modo:'ver',titulo:f.finca,fincas:[f]});const vk=$('#vkml');if(vk)vk.onclick=()=>exportKml([f]);
+  $('#ed').onclick=()=>{draft={...f};view='form';render()};$('#shareFinca').onclick=()=>abrirCompartirFinca(f);$('#dmad').onclick=()=>{medit={finca_id:f.id,variedad:f.variedad||''};view='madform';render()};const vm=$('#vmap');if(vm)vm.onclick=()=>abrirMapa({modo:'ver',titulo:f.finca,fincas:[f]});const vk=$('#vkml');if(vk)vk.onclick=()=>exportKml([f]);
   $('#add').onclick=async()=>{const b=$('#add'),t=$('#nt').value.trim(),files=[...pend];if(!t&&!files.length)return;b.disabled=true;b.textContent='Guardando…';
     try{const fotos=await uploadPhotos(f.id,files);const {error}=await sb.from('anotaciones').insert({finca_id:f.id,texto:t,fotos});if(error)throw error;pend=[];await load();render()}
     catch(e){toast('No se pudo guardar: '+(e.message||e));b.disabled=false;b.textContent='Añadir anotación'}};

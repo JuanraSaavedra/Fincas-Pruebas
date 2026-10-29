@@ -1,6 +1,12 @@
-Fincas 2.23
-- Copia manual en CopiaSeguridadFincas.xlsx (importable con Restaurar).
-- Conserva la copia en iCloud Drive manualmente.
-- La copia automática cifrada de GitHub requiere configurar el repositorio privado Fincas-Backups (ver segundo ZIP).
-- No se incluyen binarios de fotografías.
-- No colocar claves secretas en Fincas-Pruebas.
+FINCAS 2.24 — COMPARTIR FINCA EN PDF
+
+Novedad: en la ficha de cada finca se añade el botón «Compartir finca (PDF)». Permite seleccionar los campos generales y decidir si se incluyen anotaciones y fotografías. El PDF se genera localmente y no modifica los datos de la finca ni la copia de seguridad.
+
+INSTALACIÓN
+1. Haz una copia de seguridad importable antes de actualizar.
+2. Descomprime este ZIP.
+3. Sustituye los archivos del repositorio de la aplicación por los incluidos, manteniendo la configuración correcta de config.js.
+4. No sobrescribas config.js con valores de otra instalación: conserva tus credenciales actuales de Supabase.
+5. Publica los cambios en GitHub Pages y abre la aplicación para probarlo.
+
+IMPORTANTE: Este paquete contiene el código actualizado, pero no publica automáticamente cambios en GitHub ni modifica la web en producción.
