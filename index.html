@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f7d32"><link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>Fincas 2.24 · Cítricos</title>
+<title>Fincas 2.26 · Cítricos</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{--bg:#f6f7f2;--card:#fff;--tx:#1d2a1a;--mu:#6b7a66;--ac:#e8820c;--ac2:#2f7d32;--bd:#dde2d6;--dn:#c0392b}
@@ -87,7 +87,7 @@ input::placeholder,textarea::placeholder{color:#7f9179}
 .home-tools .fi{position:absolute}
 @media(max-width:370px){.home-tools,.mad-tools{gap:5px}.home-tools .tool-label,.mad-tools .tool-label{font-size:10px}}
 </style></head><body>
-<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.24</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
+<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.26</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
 <main id="app"></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -765,14 +765,37 @@ function exportPdf(){const rows=filtered();if(!rows.length)return toast('No hay 
   const J=window.jspdf&&window.jspdf.jsPDF;if(!J)return toast('No se pudo cargar el generador de PDF.');
   const d=new J({orientation:'landscape',unit:'mm',format:'a4'});
   const C=[['Finca',36,f=>f.finca],['Propietarios',32,f=>f.propietarios],['Variedad',26,f=>f.variedad],['Patrón',25,f=>f.patron],['Sup. (ha)',14,f=>f.superficie],['Marco',16,f=>(f.marco_a&&f.marco_b)?f.marco_a+'x'+f.marco_b:''],['Árboles',17,f=>arb(f)],['Término municipal',40,f=>munis(f).join(', ')],['Pol./Parc.',28,f=>parcelasDe(f).map(p=>(p.poligono||'-')+'/'+(p.parcela||'-')).join(' · ')||'-'],['Últ. visita',36,f=>fmt(lastVisit(f))]];
+  const left=10, tableW=270, bottom=194, lineH=4.2;
   let y=0;
-  const head=()=>{d.setFontSize(14);d.setFont(undefined,'bold');d.text('Listado de fincas de cítricos',10,14);d.setFontSize(9);d.setFont(undefined,'normal');d.text('Variedad: '+(fv||'todas')+'   Municipio: '+(fm||'todos')+'   Fecha: '+new Date().toLocaleDateString('es-ES'),10,20);
-    y=25;d.setFillColor(47,125,50);d.rect(10,y,270,10,'F');d.setTextColor(255);d.setFont(undefined,'bold');d.setFontSize(8);let x=10;C.forEach(c=>{const label=d.splitTextToSize(c[0],c[1]-4);d.text(label,x+2,y+(label.length>1?4:6));x+=c[1]});d.setTextColor(0);d.setFont(undefined,'normal');d.setFontSize(9);y+=10};
+  const head=()=>{
+    d.setTextColor(25,45,28);d.setFontSize(15);d.setFont(undefined,'bold');d.text('Listado de fincas de cítricos',left,14);
+    d.setFontSize(9);d.setFont(undefined,'normal');d.setTextColor(70,70,70);
+    d.text('Variedad: '+(fv||'todas')+'   ·   Municipio: '+(fm||'todos')+'   ·   Fecha: '+new Date().toLocaleDateString('es-ES'),left,21);
+    y=29;const hh=14;d.setFillColor(47,105,51);d.roundedRect(left,y,tableW,hh,1,1,'F');
+    d.setTextColor(255,255,255);d.setFont(undefined,'bold');d.setFontSize(8.5);let x=left;
+    C.forEach(c=>{const label=d.splitTextToSize(c[0],c[1]-5);const textH=label.length*3.7;const ty=y+(hh-textH)/2+3.0;d.text(label,x+c[1]/2,ty,{align:'center'});x+=c[1]});
+    d.setTextColor(0);d.setFont(undefined,'normal');d.setFontSize(8);y+=hh+2;
+  };
   head();
-  rows.forEach((f,i)=>{const cells=C.map(c=>d.splitTextToSize(String(c[2](f)??''),c[1]-2)),h=Math.max(...cells.map(l=>l.length))*4+2;
-    if(y+h>196){d.addPage();head()}if(i%2===0){d.setFillColor(242,245,238);d.rect(10,y,270,h,'F')}
-    let x=10;cells.forEach((l,j)=>{d.text(l,x+2,y+4.5);x+=C[j][1]});y+=h});
+  rows.forEach((f,i)=>{
+    const cells=C.map(c=>d.splitTextToSize(String(c[2](f)??'—'),c[1]-5));
+    const maxLines=Math.max(1,...cells.map(l=>l.length));
+    const h=Math.max(8,maxLines*lineH+4.5);
+    if(y+h>bottom){d.addPage();head()}
+    if(i%2===0){d.setFillColor(244,247,242);d.rect(left,y,tableW,h,'F')}
+    d.setDrawColor(210,218,208);d.setLineWidth(.18);d.line(left,y+h,left+tableW,y+h);
+    let x=left;
+    cells.forEach((lines,j)=>{
+      if(j>0){d.setDrawColor(224,229,222);d.line(x,y,x,y+h)}
+      const textH=lines.length*lineH;const ty=y+(h-textH)/2+3.0;
+      d.setFontSize(8);d.setTextColor(35,35,35);d.text(lines,x+2.5,ty);
+      x+=C[j][1];
+    });
+    y+=h+0.3;
+  });
   const tot=rows.reduce((s,f)=>s+(+f.superficie||0),0),ta=rows.reduce((s,f)=>s+arb(f),0);
-  if(y+10>196){d.addPage();y=15}d.setFont(undefined,'bold');d.text(rows.length+' fincas  ·  '+tot.toFixed(2)+' ha  ·  '+ta.toLocaleString('es-ES')+' árboles',10,y+7);
+  if(y+10>bottom){d.addPage();y=16}else y+=3;
+  d.setDrawColor(47,105,51);d.setLineWidth(.5);d.line(left,y,left+tableW,y);
+  d.setFont(undefined,'bold');d.setFontSize(9);d.setTextColor(25,45,28);d.text(rows.length+' fincas   ·   '+tot.toFixed(2)+' ha   ·   '+ta.toLocaleString('es-ES')+' árboles',left,y+6);
   dl(fname('pdf'),d.output('blob'))}
 </script></body></html>

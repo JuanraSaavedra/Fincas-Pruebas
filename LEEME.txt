@@ -1,15 +1,16 @@
-FINCAS 2.25 — Ajuste del listado PDF
+FINCAS 2.26 — Mejora de legibilidad del listado PDF
 
-Cambios:
-- El encabezado de la columna ahora dice “Término municipal”.
-- El encabezado puede ocupar dos líneas y tiene más espacio para no pegarse al contenido.
-- Se ajustaron los anchos de las columnas y el margen interior de las celdas.
-- Se conserva la función de compartir una finca en PDF de la versión 2.24.
+Cambios en el PDF del listado de fincas:
+- Más separación entre el título, los filtros y la tabla.
+- Encabezados más altos, con el texto centrado y separado de los datos.
+- Más espacio vertical dentro de cada fila y ajuste de líneas para textos largos.
+- Letra y contraste uniformes, filas alternas y separadores finos para seguir cada registro.
+- Se mantiene el encabezado “Término municipal” y la función de compartir una finca en PDF.
 
 Instalación:
 1. Haz una copia de seguridad de los datos antes de cambiar archivos.
-2. Sustituye index.html en el repositorio por el incluido aquí.
-3. Conserva config.js, manifest.webmanifest, iconos y sw.js existentes.
-4. Publica los cambios y prueba el botón PDF con una finca cuyo término municipal sea largo.
+2. Sustituye los archivos del paquete en el repositorio, conservando la configuración y los iconos incluidos.
+3. Publica los cambios en GitHub Pages.
+4. Abre la aplicación y genera un listado PDF para revisar la presentación.
 
-Estos archivos no se han publicado automáticamente en GitHub Pages.
+Importante: esta versión se ha comprobado sintácticamente, pero no se ha probado visualmente con datos reales ni se ha publicado automáticamente en GitHub Pages.
