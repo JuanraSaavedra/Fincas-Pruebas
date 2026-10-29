@@ -329,7 +329,7 @@ function abrirCompartirFinca(f){
     ['municipio','Término municipal'],['parcelas','Detalle de parcelas'],['coordenadas','Coordenadas GPS']
   ];
   const ov=document.createElement('div');ov.className='ov';ov.style.cssText='position:fixed;inset:0;background:#0009;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto';
-  ov.innerHTML=`<section style="background:var(--card,#fff);color:var(--text,#222);border-radius:16px;padding:18px;max-width:520px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px #0005"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><h2 style="margin:0">📤 Compartir finca</h2><button type="button" id="shareClose" class="s">✕</button></div><p class="mu">Elige los datos que quieres incluir en el PDF de <b>${esc(f.finca||'Finca')}</b>.</p><b>Datos generales</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0">${campos.map((c,i)=>`<label style="display:flex;gap:8px;align-items:flex-start;font-weight:normal"><input type="checkbox" class="share-field" value="${c[0]}" ${i<8?'checked':''} style="width:auto;margin-top:3px">${c[1]}</label>`).join('')}</div><hr><label style="display:flex;gap:8px;align-items:center;font-weight:normal"><input id="shareNotes" type="checkbox" checked style="width:auto"> Incluir anotaciones</label><label style="display:flex;gap:8px;align-items:center;font-weight:normal;margin-top:8px"><input id="sharePhotos" type="checkbox" style="width:auto"> Incluir fotografías</label><p class="mu" style="font-size:12px">Las fotos se incorporan al PDF si están seleccionadas. Solo se incluyen los apartados marcados.</p><button type="button" id="shareGenerate" style="width:100%;margin-top:12px">📄 Generar PDF</button><div id="shareStatus" class="mu" style="margin-top:8px"></div></section>`;
+  ov.innerHTML=`<section style="background:var(--card,#fff);color:var(--text,#222);border-radius:16px;padding:18px;max-width:520px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px #0005"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><h2 style="margin:0">📤 Compartir finca</h2><button type="button" id="shareClose" class="s">✕</button></div><p class="mu">Elige los datos que quieres incluir en el PDF de <b>${esc(f.finca||'Finca')}</b>.</p><b>Datos generales</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0">${campos.map((c,i)=>`<label style="display:flex;gap:8px;align-items:flex-start;font-weight:normal"><input type="checkbox" class="share-field" value="${c[0]}" ${i<8?'checked':''} style="width:auto;margin-top:3px">${c[1]}</label>`).join('')}</div><hr><label style="display:flex;gap:8px;align-items:center;font-weight:normal"><input id="shareNotes" type="checkbox" checked style="width:auto"> Incluir anotaciones</label><label style="display:flex;gap:8px;align-items:center;font-weight:normal;margin-top:8px"><input id="shareCroquis" type="checkbox" checked style="width:auto"> Incluir croquis SIGPAC (si hay geometrías disponibles)</label><label style="display:flex;gap:8px;align-items:center;font-weight:normal;margin-top:8px"><input id="sharePhotos" type="checkbox" style="width:auto"> Incluir fotografías</label><p class="mu" style="font-size:12px">Las fotos se incorporan al PDF si están seleccionadas. Solo se incluyen los apartados marcados.</p><button type="button" id="shareGenerate" style="width:100%;margin-top:12px">📄 Generar PDF</button><div id="shareStatus" class="mu" style="margin-top:8px"></div></section>`;
   document.body.appendChild(ov);
   const close=()=>ov.remove();ov.querySelector('#shareClose').onclick=close;ov.addEventListener('click',e=>{if(e.target===ov)close()});
   ov.querySelector('#shareGenerate').onclick=async()=>{
@@ -337,14 +337,48 @@ function abrirCompartirFinca(f){
     try{
       const J=window.jspdf&&window.jspdf.jsPDF;if(!J)throw new Error('No se ha podido cargar el generador PDF. Comprueba la conexión.');
       const selected=[...ov.querySelectorAll('.share-field:checked')].map(x=>x.value),withNotes=ov.querySelector('#shareNotes').checked,withPhotos=ov.querySelector('#sharePhotos').checked;
-      const d=new J({orientation:'portrait',unit:'mm',format:'a4'}),margin=15,pageW=210,pageH=297;let y=20;
+      const d=new J({orientation:'portrait',unit:'mm',format:'a4'}),margin=17,pageW=210,pageH=297,usable=176;let y=22;
       const safe=v=>String(v??'').trim()||'—';
-      const line=(label,value)=>{if(!selected.length)return;const lines=d.splitTextToSize(label+': '+safe(value),pageW-margin*2);if(y+lines.length*5+4>pageH-15){d.addPage();y=18}d.setFont('helvetica','bold');d.text(label+':',margin,y);d.setFont('helvetica','normal');const labW=Math.min(d.getTextWidth(label+': ')+1,48);d.text(d.splitTextToSize(safe(value),pageW-margin*2-labW),margin+labW,y);y+=Math.max(6,lines.length*5+1)};
-      d.setFont('helvetica','bold');d.setFontSize(18);d.text('Informe de finca',margin,y);y+=8;d.setFontSize(12);d.text(safe(f.finca),margin,y);y+=6;d.setFont('helvetica','normal');d.setFontSize(9);d.setTextColor(100);d.text('Generado el '+new Date().toLocaleString('es-ES'),margin,y);d.setTextColor(0);y+=9;
-      const values={finca:f.finca,propietarios:f.propietarios,variedad:f.variedad,patron:f.patron,superficie:(f.superficie??'')+' ha',marco:f.marco_a&&f.marco_b?f.marco_a+' × '+f.marco_b+' m':'—',arboles:arb(f).toLocaleString('es-ES'),municipio:munis(f).join(', '),parcelas:parcelasDe(f).map((p,i)=>`${i+1}. Pol. ${p.poligono||'—'}, Parc. ${p.parcela||'—'}${p.recinto?' , Rec. '+p.recinto:''}${p.municipio?' · '+p.municipio:''}${p.superficie?' · '+p.superficie+' ha':''}`).join('\n'),coordenadas:hasGeo(f)?`${f.lat}, ${f.lng}`:parcelasDe(f).filter(p=>p.lat!=null&&p.lng!=null).map(p=>`${p.lat}, ${p.lng}`).join(' · ')};
-      if(selected.length){d.setFontSize(11);d.setFont('helvetica','bold');d.text('Datos generales',margin,y);y+=7;d.setFontSize(10);selected.forEach(k=>line(campos.find(c=>c[0]===k)?.[1]||k,values[k]));y+=2}
+      const page=()=>{d.addPage();y=20};
+      const space=h=>{if(y+h>pageH-20)page()};
+      const section=t=>{space(16);y+=5;d.setFillColor(232,240,247);d.roundedRect(margin,y-6,usable,11,2,2,'F');d.setFont('helvetica','bold');d.setFontSize(12);d.setTextColor(28,55,75);d.text(t,margin+4,y+1);d.setTextColor(35);y+=15};
+      const line=(label,value)=>{
+        const text=safe(value).replace(/\\n/g,'\\n');
+        const lines=d.splitTextToSize(text,usable-10);
+        const h=7+lines.length*5.2+4;space(h+3);
+        d.setFillColor(247,249,251);d.roundedRect(margin,y-4,usable,h,2,2,'F');
+        d.setFont('helvetica','bold');d.setFontSize(9);d.setTextColor(70,83,97);d.text(label,margin+5,y+2);
+        d.setFont('helvetica','normal');d.setFontSize(10.5);d.setTextColor(22,32,42);
+        d.text(lines,margin+5,y+9);y+=h+4;
+      };
+      d.setFont('helvetica','bold');d.setFontSize(19);d.setTextColor(25,55,75);
+      d.text('Informe de finca',margin,y);y+=10;
+      d.setFontSize(14);d.text(d.splitTextToSize(safe(f.finca),usable),margin,y);y+=12;
+      d.setFont('helvetica','normal');d.setFontSize(9);d.setTextColor(105);
+      d.text('Generado el '+new Date().toLocaleString('es-ES'),margin,y);d.setTextColor(30);y+=9;
+      const values={finca:f.finca,propietarios:f.propietarios,variedad:f.variedad,patron:f.patron,superficie:(f.superficie??'')+' ha',marco:f.marco_a&&f.marco_b?f.marco_a+' × '+f.marco_b+' m':'—',arboles:arb(f).toLocaleString('es-ES'),municipio:munis(f).join(', '),parcelas:parcelasDe(f).map((p,i)=>`${i+1}. Pol. ${p.poligono||'—'}, Parc. ${p.parcela||'—'}${p.recinto?' , Rec. '+p.recinto:''}${p.municipio?' · '+p.municipio:''}${p.superficie?' · '+p.superficie+' ha':''}`).join('\\n'),coordenadas:hasGeo(f)?`${f.lat}, ${f.lng}`:parcelasDe(f).filter(p=>p.lat!=null&&p.lng!=null).map(p=>`${p.lat}, ${p.lng}`).join(' · ')};
+      if(selected.length){section('Datos generales');selected.forEach(k=>line(campos.find(c=>c[0]===k)?.[1]||k,values[k]))}
+      if(ov.querySelector('#shareCroquis').checked){
+        section('Croquis de parcelas SIGPAC');
+        const pp=parcelasDe(f);let contours=[];
+        for(const p of pp){const rings=await geometriaRecinto(p);if(rings?.length)contours.push({p,rings})}
+        if(!contours.length){line('Croquis','No disponible: se necesitan coordenadas y geometrías SIGPAC verificables. No se dibujan límites aproximados.')}
+        else{
+          const coords=contours.flatMap(x=>x.rings.flat()),lat0=coords.reduce((a,c)=>a+c[0],0)/coords.length;
+          const xy=coords.map(c=>[c[1]*Math.cos(lat0*Math.PI/180),c[0]]);
+          const minX=Math.min(...xy.map(c=>c[0])),maxX=Math.max(...xy.map(c=>c[0])),minY=Math.min(...xy.map(c=>c[1])),maxY=Math.max(...xy.map(c=>c[1]));
+          const boxW=usable-14,boxH=95;space(boxH+20);
+          d.setFillColor(248,250,252);d.roundedRect(margin,y-3,usable,boxH+13,2,2,'F');
+          const sx=boxW/Math.max(maxX-minX,1e-8),sy=boxH/Math.max(maxY-minY,1e-8),scale=Math.min(sx,sy);
+          const ox=margin+7+(boxW-(maxX-minX)*scale)/2,oy=y+4+(boxH-(maxY-minY)*scale)/2;
+          d.setDrawColor(24,110,86);d.setLineWidth(.45);
+          contours.forEach((entry,i)=>entry.rings.forEach(r=>{for(let j=1;j<r.length;j++){const a=r[j-1],b=r[j],ax=ox+(a[1]*Math.cos(lat0*Math.PI/180)-minX)*scale,bx=ox+(b[1]*Math.cos(lat0*Math.PI/180)-minX)*scale,ay=oy+boxH-(a[0]-minY)*scale,by=oy+boxH-(b[0]-minY)*scale;d.line(ax,ay,bx,by)}}));
+          y+=boxH+15;d.setFontSize(8);d.setTextColor(90);d.text('Croquis orientativo de los recintos obtenidos de SIGPAC; no sustituye un plano oficial.',margin,y);y+=10;d.setTextColor(30);
+          if(contours.length<pp.length)line('Aviso',`Contornos disponibles: ${contours.length} de ${pp.length} recintos. El croquis puede estar incompleto.`);
+        }
+      }
       const notes=[...(f.anotaciones||[])].sort((a,b)=>String(a.fecha||'')<String(b.fecha||'')?1:-1);
-      if(withNotes){if(y+12>pageH-15){d.addPage();y=18}d.setFontSize(12);d.setFont('helvetica','bold');d.text('Anotaciones',margin,y);y+=7;d.setFontSize(10);d.setFont('helvetica','normal');if(!notes.length){d.text('Sin anotaciones.',margin,y);y+=6}for(const n of notes){const txt=(n.texto||'').trim()||'(Sin texto)';const lines=d.splitTextToSize(fmt(n.fecha)+' · '+txt,pageW-margin*2);if(y+lines.length*4.8>pageH-15){d.addPage();y=18}d.text(lines,margin,y);y+=lines.length*4.8+4;
+      if(withNotes){section('Anotaciones');d.setFontSize(10);d.setFont('helvetica','normal');if(!notes.length){d.text('Sin anotaciones.',margin,y);y+=6}for(const n of notes){const txt=(n.texto||'').trim()||'(Sin texto)';const lines=d.splitTextToSize(fmt(n.fecha)+' · '+txt,usable-10);space(lines.length*5.2+10);d.setFont('helvetica','normal');d.setFontSize(10);d.text(lines,margin+4,y);y+=lines.length*5.2+8;
           if(withPhotos&&(n.fotos||[]).length){const paths=n.fotos||[];await signed(paths);for(const path of paths){try{let url=urlCache[path];if(!url){const {data}=await sb.storage.from('fotos').createSignedUrl(path,3600);url=data?.signedUrl}if(!url)continue;const response=await fetch(url);if(!response.ok)continue;const blob=await response.blob();const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});const props=d.getImageProperties(dataUrl),maxW=pageW-margin*2,maxH=95,scale=Math.min(maxW/props.width,maxH/props.height),w=props.width*scale,h=props.height*scale;if(y+h>pageH-15){d.addPage();y=18}d.addImage(dataUrl,props.fileType||'JPEG',margin,y,w,h);y+=h+5}catch(err){console.warn('No se pudo incluir una fotografía',err)}}}
         }} else if(withPhotos){statusEl.textContent='Para incluir fotografías, marca también “Incluir anotaciones”; las fotos están asociadas a cada anotación.';btn.disabled=false;btn.textContent='📄 Generar PDF';return}
       const clean=(f.finca||'Finca').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9_-]+/g,'_');d.save('Informe_'+clean+'_'+new Date().toISOString().slice(0,10)+'.pdf');statusEl.textContent='PDF generado. Ya puedes compartirlo desde las opciones de tu dispositivo.';btn.textContent='PDF generado ✓';setTimeout(close,1200);
