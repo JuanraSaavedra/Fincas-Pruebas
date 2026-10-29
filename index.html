@@ -764,14 +764,14 @@ function exportCsv(){const rows=filtered();if(!rows.length)return toast('No hay 
 function exportPdf(){const rows=filtered();if(!rows.length)return toast('No hay fincas con esos filtros.');
   const J=window.jspdf&&window.jspdf.jsPDF;if(!J)return toast('No se pudo cargar el generador de PDF.');
   const d=new J({orientation:'landscape',unit:'mm',format:'a4'});
-  const C=[['Finca',38,f=>f.finca],['Propietarios',36,f=>f.propietarios],['Variedad',28,f=>f.variedad],['Patrón',28,f=>f.patron],['Sup. (ha)',14,f=>f.superficie],['Marco',18,f=>(f.marco_a&&f.marco_b)?f.marco_a+'x'+f.marco_b:''],['Árboles',18,f=>arb(f)],['Municipio',34,f=>munis(f).join(', ')],['Pol./Parc.',26,f=>parcelasDe(f).map(p=>(p.poligono||'-')+'/'+(p.parcela||'-')).join(' · ')||'-'],['Últ. visita',30,f=>fmt(lastVisit(f))]];
+  const C=[['Finca',36,f=>f.finca],['Propietarios',32,f=>f.propietarios],['Variedad',26,f=>f.variedad],['Patrón',25,f=>f.patron],['Sup. (ha)',14,f=>f.superficie],['Marco',16,f=>(f.marco_a&&f.marco_b)?f.marco_a+'x'+f.marco_b:''],['Árboles',17,f=>arb(f)],['Término municipal',40,f=>munis(f).join(', ')],['Pol./Parc.',28,f=>parcelasDe(f).map(p=>(p.poligono||'-')+'/'+(p.parcela||'-')).join(' · ')||'-'],['Últ. visita',36,f=>fmt(lastVisit(f))]];
   let y=0;
   const head=()=>{d.setFontSize(14);d.setFont(undefined,'bold');d.text('Listado de fincas de cítricos',10,14);d.setFontSize(9);d.setFont(undefined,'normal');d.text('Variedad: '+(fv||'todas')+'   Municipio: '+(fm||'todos')+'   Fecha: '+new Date().toLocaleDateString('es-ES'),10,20);
-    y=25;d.setFillColor(47,125,50);d.rect(10,y,270,7,'F');d.setTextColor(255);d.setFont(undefined,'bold');let x=10;C.forEach(c=>{d.text(c[0],x+1,y+5);x+=c[1]});d.setTextColor(0);d.setFont(undefined,'normal');y+=7};
+    y=25;d.setFillColor(47,125,50);d.rect(10,y,270,10,'F');d.setTextColor(255);d.setFont(undefined,'bold');d.setFontSize(8);let x=10;C.forEach(c=>{const label=d.splitTextToSize(c[0],c[1]-4);d.text(label,x+2,y+(label.length>1?4:6));x+=c[1]});d.setTextColor(0);d.setFont(undefined,'normal');d.setFontSize(9);y+=10};
   head();
   rows.forEach((f,i)=>{const cells=C.map(c=>d.splitTextToSize(String(c[2](f)??''),c[1]-2)),h=Math.max(...cells.map(l=>l.length))*4+2;
     if(y+h>196){d.addPage();head()}if(i%2===0){d.setFillColor(242,245,238);d.rect(10,y,270,h,'F')}
-    let x=10;cells.forEach((l,j)=>{d.text(l,x+1,y+4.5);x+=C[j][1]});y+=h});
+    let x=10;cells.forEach((l,j)=>{d.text(l,x+2,y+4.5);x+=C[j][1]});y+=h});
   const tot=rows.reduce((s,f)=>s+(+f.superficie||0),0),ta=rows.reduce((s,f)=>s+arb(f),0);
   if(y+10>196){d.addPage();y=15}d.setFont(undefined,'bold');d.text(rows.length+' fincas  ·  '+tot.toFixed(2)+' ha  ·  '+ta.toLocaleString('es-ES')+' árboles',10,y+7);
   dl(fname('pdf'),d.output('blob'))}
