@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f7d32"><link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>Fincas 2.19 · Cítricos</title>
+<title>Fincas 2.23 · Cítricos</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{--bg:#f6f7f2;--card:#fff;--tx:#1d2a1a;--mu:#6b7a66;--ac:#e8820c;--ac2:#2f7d32;--bd:#dde2d6;--dn:#c0392b}
@@ -87,7 +87,7 @@ input::placeholder,textarea::placeholder{color:#7f9179}
 .home-tools .fi{position:absolute}
 @media(max-width:370px){.home-tools,.mad-tools{gap:5px}.home-tools .tool-label,.mad-tools .tool-label{font-size:10px}}
 </style></head><body>
-<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.22</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
+<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.23</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
 <main id="app"></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -329,7 +329,7 @@ function render(){
   if(view==='login')return login(app);if(view==='list')return list(app);if(view==='detail')return detail(app);if(view==='mad')return mad(app);if(view==='madform')return madform(app);form(app);
 }
 function login(app){
-  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.22</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
+  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.23</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
   const go=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
   $('#go').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};
 }
@@ -340,7 +340,7 @@ function list(app){
   const rows=filtered(),tot=rows.reduce((s,f)=>s+(+f.superficie||0),0),ta=rows.reduce((s,f)=>s+arb(f),0);
   app.innerHTML=tabsHtml('list')+`<div class="row"><input id="q" placeholder="Buscar…" value="${esc(q)}"><button id="new" style="flex:0 0 auto">＋ Nueva</button></div>${filtersHtml()}
   <p class="mu">${pendingSync.length?'⏳ '+pendingSync.length+' cambios por sincronizar · ':''}${rows.length} fincas · ${tot.toFixed(2)} ha · ${ta.toLocaleString('es-ES')} árboles</p>
-  <div class="home-tools" aria-label="Herramientas; toca una vez para ver el nombre y otra para ejecutar"><button class="s" id="mapall" data-label="Mapa" title="Mapa de mis fincas" aria-label="Mapa de mis fincas"><span class="tool-icon">🗺️</span><span class="tool-label">Mapa</span></button><button class="s" id="kmlall" data-label="Earth" title="Exportar a Google Earth" aria-label="Exportar a Google Earth"><span class="tool-icon">🌎</span><span class="tool-label">Earth</span></button><button class="s" id="pdf" data-label="PDF" title="Informe PDF de fincas" aria-label="Informe PDF de fincas"><span class="tool-icon">📄</span><span class="tool-label">PDF</span></button><button class="s" id="csv" data-label="CSV" title="Exportar CSV" aria-label="Exportar CSV"><span class="tool-icon">📋</span><span class="tool-label">CSV</span></button><button class="s" id="excel" data-label="Excel" title="Exportar Excel" aria-label="Exportar Excel"><span class="tool-icon">📗</span><span class="tool-label">Excel</span></button><button class="s" id="backup" data-label="Copia" title="Copia de seguridad" aria-label="Copia de seguridad"><span class="tool-icon">🛡️</span><span class="tool-label">Copia</span></button><button class="s" id="restore" data-label="Restaurar" title="Recuperar copia de seguridad" aria-label="Recuperar copia de seguridad"><span class="tool-icon">♻️</span><span class="tool-label">Restaurar</span></button><button class="s" id="helpTools" data-label="Ayuda" title="Ayuda sobre herramientas" aria-label="Ayuda sobre herramientas"><span class="tool-icon">❔</span><span class="tool-label">Ayuda</span></button><input class="fi" type="file" id="restorefile" accept=".json,application/json"></div><p class="mu" style="margin:4px 0 0">PDF y CSV incluyen solo las fincas filtradas. Excel incluye todas las fincas y parcelas.</p>`+
+  <div class="home-tools" aria-label="Herramientas; toca una vez para ver el nombre y otra para ejecutar"><button class="s" id="mapall" data-label="Mapa" title="Mapa de mis fincas" aria-label="Mapa de mis fincas"><span class="tool-icon">🗺️</span><span class="tool-label">Mapa</span></button><button class="s" id="kmlall" data-label="Earth" title="Exportar a Google Earth" aria-label="Exportar a Google Earth"><span class="tool-icon">🌎</span><span class="tool-label">Earth</span></button><button class="s" id="pdf" data-label="PDF" title="Informe PDF de fincas" aria-label="Informe PDF de fincas"><span class="tool-icon">📄</span><span class="tool-label">PDF</span></button><button class="s" id="csv" data-label="CSV" title="Exportar CSV" aria-label="Exportar CSV"><span class="tool-icon">📋</span><span class="tool-label">CSV</span></button><button class="s" id="excel" data-label="Excel" title="Exportar Excel" aria-label="Exportar Excel"><span class="tool-icon">📗</span><span class="tool-label">Excel</span></button><button class="s" id="backup" data-label="Copia" title="Copia de seguridad" aria-label="Copia de seguridad"><span class="tool-icon">🛡️</span><span class="tool-label">Copia</span></button><button class="s" id="restore" data-label="Restaurar" title="Recuperar copia de seguridad" aria-label="Recuperar copia de seguridad"><span class="tool-icon">♻️</span><span class="tool-label">Restaurar</span></button><button class="s" id="helpTools" data-label="Ayuda" title="Ayuda sobre herramientas" aria-label="Ayuda sobre herramientas"><span class="tool-icon">❔</span><span class="tool-label">Ayuda</span></button><input class="fi" type="file" id="restorefile" accept=".xlsx,.json,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div><p class="mu" style="margin:4px 0 0">PDF y CSV incluyen solo las fincas filtradas. Excel incluye todas las fincas y parcelas. Copia descarga un Excel restaurable; guárdalo en iCloud Drive.</p>`+
   (rows.map(f=>{const lv=lastVisit(f);return`<div class="card item" data-id="${f.id}"><b>${esc(f.finca)}</b><div class="mu">${esc(f.propietarios)}</div>
    <span class="tag">${esc(f.variedad||'—')}</span>${f.patron?`<span class="tag">Patrón: ${esc(f.patron)}</span>`:''}<span class="tag">${f.superficie||0} ha</span><span class="tag">${arb(f).toLocaleString('es-ES')} árboles</span><span class="tag">${esc(munis(f).join(', '))}</span>
    <div class="mu" style="margin-top:6px">Última visita: ${fmt(lv)}</div></div>`}).join('')||'<p class="mu">No hay fincas con esos criterios.</p>');
@@ -626,39 +626,57 @@ async function allBackupRows(table,selection='*'){
   throw Error('Demasiados registros; no se ha generado una copia incompleta.');
 }
 async function exportBackup(){
-  if(!navigator.onLine)return toast('Conéctate a Internet para obtener una copia completa del servidor.');
-  if(pendingSync.length)return toast('Hay cambios sin sincronizar. Espera a que se sincronicen antes de crear la copia.');
-  const btn=$('#backup');if(btn){btn.disabled=true;btn.textContent='Preparando copia…'}
+  if(!navigator.onLine)return toast('Conéctate a Internet para obtener una copia completa.');
+  if(pendingSync.length)return toast('Sincroniza los cambios pendientes antes de hacer la copia.');
+  if(typeof XLSX==='undefined')return toast('Necesitas conexión para cargar el generador Excel.');
+  const btn=$('#backup'),old=btn?btn.innerHTML:'';
+  if(btn){btn.disabled=true;btn.textContent='Preparando…'}
   try{
     const {data:{user}}=await sb.auth.getUser();if(!user)throw Error('Inicia sesión.');
     const [fs,ns,ms]=await Promise.all([allBackupRows('fincas'),allBackupRows('anotaciones'),allBackupRows('madurez')]);
-    const payload={formato:BACKUP_FORMAT,version:BACKUP_VERSION,fecha:new Date().toISOString(),usuario:user.id,contenido:{fincas:fs,anotaciones:ns,madurez:ms},aviso:'Las fotos se incluyen solo como referencias de almacenamiento; sus archivos de imagen no están dentro de este JSON.'};
-    const name='Fincas_respaldo_'+new Date().toISOString().slice(0,10)+'.json';
-    dl(name,new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'}));
-    toast('Copia descargada: '+fs.length+' fincas, '+ns.length+' anotaciones y '+ms.length+' pruebas. Guarda el JSON en Archivos/iCloud.');
-  }catch(e){alert('No se pudo generar la copia completa. No se ha descargado un archivo parcial.\n'+e.message)}
-  finally{if(btn){btn.disabled=false;btn.textContent='🛡️ Copia de seguridad'}}
+    const wb=XLSX.utils.book_new(),fecha=new Date().toISOString();
+    const meta=[{formato:BACKUP_FORMAT,version:BACKUP_VERSION,fecha,usuario:user.id,fincas:fs.length,anotaciones:ns.length,madurez:ms.length,nota:'No incluye archivos binarios de fotografías'}];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(meta),'CONTROL');
+    for(const [name,rows] of [['FINCAS',fs],['ANOTACIONES',ns],['MADUREZ',ms]]){
+      const sh=XLSX.utils.json_to_sheet(rows.map(row=>({id:row.id,registro_json:JSON.stringify(row)})));
+      if(!rows.length)XLSX.utils.sheet_add_aoa(sh,[['id','registro_json']],{origin:'A1'});
+      sh['!cols']=[{wch:38},{wch:90}];XLSX.utils.book_append_sheet(wb,sh,name);
+    }
+    XLSX.writeFile(wb,'CopiaSeguridadFincas.xlsx');
+    localStorage.setItem('fincas_ultima_copia_manual',fecha);
+    toast('Excel generado: '+fs.length+' fincas, '+ns.length+' anotaciones, '+ms.length+' pruebas. Guárdalo en iCloud Drive.');
+  }catch(e){alert('No se pudo generar la copia: '+e.message)}
+  finally{if(btn){btn.disabled=false;btn.innerHTML=old}}
 }
 async function restoreBackup(file){
-  if(!navigator.onLine)return toast('Para recuperar datos debes estar conectado a Internet.');
-  if(pendingSync.length)return toast('Sincroniza primero los cambios pendientes.');
+  if(!navigator.onLine)return toast('Debes estar conectado para restaurar.');
+  if(pendingSync.length)return toast('Sincroniza antes los cambios pendientes.');
   try{
     if(file.size>25*1024*1024)throw Error('Archivo demasiado grande (máximo 25 MB).');
-    const doc=JSON.parse(await file.text());
-    if(doc.formato!==BACKUP_FORMAT||doc.version!==BACKUP_VERSION||!doc.contenido||!['fincas','anotaciones','madurez'].every(k=>Array.isArray(doc.contenido[k])))throw Error('Este archivo no es una copia compatible de Fincas.');
+    let doc;
+    if(/\.xlsx$/i.test(file.name)){
+      if(typeof XLSX==='undefined')throw Error('No se ha cargado la biblioteca Excel.');
+      const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+      for(const sheet of ['CONTROL','FINCAS','ANOTACIONES','MADUREZ'])if(!wb.Sheets[sheet])throw Error('Falta la hoja '+sheet);
+      const control=XLSX.utils.sheet_to_json(wb.Sheets.CONTROL)[0];
+      if(!control)throw Error('Hoja de control vacía.');
+      const parseRows=sheet=>XLSX.utils.sheet_to_json(wb.Sheets[sheet]).map(row=>JSON.parse(row.registro_json));
+      doc={formato:control.formato,version:Number(control.version),fecha:control.fecha,usuario:control.usuario,contenido:{fincas:parseRows('FINCAS'),anotaciones:parseRows('ANOTACIONES'),madurez:parseRows('MADUREZ')}};
+    }else{doc=JSON.parse(await file.text())}
+    if(doc.formato!==BACKUP_FORMAT||doc.version!==BACKUP_VERSION||!doc.contenido||!['fincas','anotaciones','madurez'].every(k=>Array.isArray(doc.contenido[k])))throw Error('Copia incompatible.');
     const {data:{user}}=await sb.auth.getUser();if(!user)throw Error('Debes iniciar sesión.');
-    if(doc.usuario!==user.id)throw Error('La copia pertenece a otra cuenta. Inicia sesión en la cuenta original.');
+    if(doc.usuario!==user.id)throw Error('Esta copia pertenece a otra cuenta.');
     const fs=doc.contenido.fincas,ns=doc.contenido.anotaciones,ms=doc.contenido.madurez;
-    if(fs.length>10000||ns.length>100000||ms.length>100000)throw Error('El archivo excede los límites admitidos.');
-    if(!confirm('Recuperar copia del '+new Date(doc.fecha).toLocaleString('es-ES')+'\n'+fs.length+' fincas · '+ns.length+' anotaciones · '+ms.length+' pruebas.\n\nSolo se añadirán registros que no existan; NO se sustituirán registros actuales. ¿Continuar?'))return;
+    if(fs.length>10000||ns.length>100000||ms.length>100000)throw Error('Se exceden los límites admitidos.');
+    if(!confirm('Restaurar copia de '+new Date(doc.fecha).toLocaleString('es-ES')+'\n'+fs.length+' fincas · '+ns.length+' anotaciones · '+ms.length+' pruebas.\n\nSolo se añadirán registros que no existan. ¿Continuar?'))return;
     const [liveF,liveN,liveM]=await Promise.all([allBackupRows('fincas','id'),allBackupRows('anotaciones','id'),allBackupRows('madurez','id')]);
     const seenF=new Set(liveF.map(x=>x.id)),seenN=new Set(liveN.map(x=>x.id)),seenM=new Set(liveM.map(x=>x.id));
     let countF=0,countN=0,countM=0;
     for(const f of fs){if(!f||typeof f.id!=='string'||seenF.has(f.id))continue;const row={id:f.id,...safeBackupRow(f,BACKUP_FIELDS)};const {error}=await sb.from('fincas').insert(row);if(error)throw Error('Finca '+(f.finca||f.id)+': '+error.message);seenF.add(f.id);countF++}
     for(const n of ns){if(!n||typeof n.id!=='string'||seenN.has(n.id)||!seenF.has(n.finca_id))continue;const row={id:n.id,finca_id:n.finca_id,...safeBackupRow(n,['fecha','texto','fotos'])};const {error}=await sb.from('anotaciones').insert(row);if(error)throw Error('Anotación '+n.id+': '+error.message);seenN.add(n.id);countN++}
     for(const m of ms){if(!m||typeof m.id!=='string'||seenM.has(m.id)||(m.finca_id&&!seenF.has(m.finca_id)))continue;const row={id:m.id,...safeBackupRow(m,['fecha','finca_id','variedad','brix','sosa_ml','peso_muestra','peso_zumo','calibres'])};const {error}=await sb.from('madurez').insert(row);if(error)throw Error('Madurez '+m.id+': '+error.message);seenM.add(m.id);countM++}
-    await load();view='list';render();alert('Recuperación terminada.\nAñadidas: '+countF+' fincas, '+countN+' anotaciones y '+countM+' pruebas.\n\nLas fotografías no se restauran desde este archivo: solo se conservan sus referencias.');
-  }catch(e){await load();render();alert('Recuperación interrumpida: '+e.message+'\nLos registros ya recuperados permanecen guardados. Puedes volver a importar el mismo archivo para continuar.');}
+    await load();view='list';render();alert('Recuperación terminada. Añadidas: '+countF+' fincas, '+countN+' anotaciones y '+countM+' pruebas.\nLas imágenes no están incluidas.');
+  }catch(e){await load();render();alert('Recuperación interrumpida: '+e.message+'\nLos registros ya importados permanecen guardados.');}
 }
 // ---------- exportar ----------
 const fname=e=>'fincas'+(fv?'_'+fv:'')+(fm?'_'+fm:'')+'.'+e;

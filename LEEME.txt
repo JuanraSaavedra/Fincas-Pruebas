@@ -1,1 +1,6 @@
-Fincas 2.22: etiquetas reales bajo los iconos en pantalla principal y madurez. Reemplaza TODOS los archivos de GitHub, incluido sw.js. Comprueba que en cabecera aparece 2.22.
+Fincas 2.23
+- Copia manual en CopiaSeguridadFincas.xlsx (importable con Restaurar).
+- Conserva la copia en iCloud Drive manualmente.
+- La copia automática cifrada de GitHub requiere configurar el repositorio privado Fincas-Backups (ver segundo ZIP).
+- No se incluyen binarios de fotografías.
+- No colocar claves secretas en Fincas-Pruebas.
