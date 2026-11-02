@@ -1,13 +1,13 @@
-FINCAS 2.34 — Búsqueda de localidades y asignación precisa de ubicación
+FINCAS 2.35 — Acceso SIGPAC centrado en la ubicación de cada finca
 
 Novedades:
-- El mapa SIGPAC muestra etiquetas de pueblos y localidades sobre el satélite mediante una capa transparente. La capa puede activarse o desactivarse desde el selector de capas.
-- Buscador integrado de pueblos, municipios y lugares. Escribe el nombre, pulsa Buscar y selecciona el resultado para centrar el mapa y acercarte a la zona. La búsqueda utiliza Nominatim de OpenStreetMap y requiere conexión.
-- Botón Google Maps: abre una búsqueda externa del texto escrito. Google Maps no devuelve automáticamente las coordenadas a Fincas; para guardar una posición exacta, selecciona el punto en el mapa integrado o usa Mi GPS y guarda la ubicación.
-- Botón Mi GPS para centrar la posición actual del móvil. Requiere permiso de ubicación y conexión segura (HTTPS).
-- Al guardar una ubicación general, se propaga a todos los registros que tengan exactamente el mismo nombre de finca y el mismo propietario (normalizados, sin diferencias de mayúsculas/acentos). No se usa coincidencia aproximada ni se asigna si falta el propietario.
-- La propagación actualiza solo la ubicación general. No modifica registros que ya tienen coordenadas propias de parcelas SIGPAC; tampoco copia polígono, parcela, recinto, uso ni superficie.
-- Los recintos SIGPAC se seguirán identificando por separado tocando el interior de la parcela.
+- El botón SIGPAC de la ficha de una finca abre el mapa integrado de Fincas, no el visor desde la vista general de España.
+- Si la finca tiene coordenadas generales, el mapa se centra en ellas con zoom de detalle (nivel 18). Si no las tiene, utiliza la primera parcela con coordenadas guardadas.
+- Si tampoco hay coordenadas de parcelas, se abre el mapa para buscar el municipio o utilizar el GPS y guardar primero la ubicación general.
+- Desde el mapa centrado puedes tocar el interior de cada recinto para consultar su referencia SIGPAC. Los recintos cítricos CI detectados se pueden añadir directamente a la ficha de esa finca.
+- Los recintos nuevos se agregan a los existentes, sin sustituirlos. Se comprueban duplicados por provincia, municipio, polígono, parcela y recinto.
+- Al guardar una ubicación general desde este mapa, se mantiene la propagación a otras variedades que tengan exactamente el mismo nombre de finca y propietario. No se copian referencias SIGPAC.
+- Los enlaces SIGPAC individuales que aparecen junto a parcelas ya identificadas se mantienen para consultar la referencia concreta en el visor oficial.
 
 Instalación:
 1. Descarga una copia de seguridad desde Fincas.
@@ -17,7 +17,7 @@ Instalación:
 
 Importante:
 - No se ha publicado en GitHub Pages ni se ha probado contra la cuenta real de Supabase.
-- La búsqueda de lugares depende de Nominatim y de los límites de uso del servicio; se ejecuta solo cuando el usuario pulsa Buscar.
-- Google Maps se abre como búsqueda externa; por limitaciones del navegador no se puede leer automáticamente la coordenada seleccionada dentro de Google Maps.
+- Para sincronizar recintos, la tabla fincas debe tener la columna JSONB parcelas utilizada por las versiones anteriores.
+- La consulta por coordenada de SIGPAC puede devolver solo parte de los recintos de una parcela; comprueba que has identificado todos antes de darla por completa.
 
-Versión 2.34 — Base de trabajo: Fincas 2.33.
+Versión 2.35 — Base de trabajo: Fincas 2.34.
