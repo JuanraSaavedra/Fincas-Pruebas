@@ -1,22 +1,23 @@
-FINCAS 2.33 — Identificación del mapa y ubicación compartida por variedades
+FINCAS 2.34 — Búsqueda de localidades y asignación precisa de ubicación
 
 Novedades:
-- Los puntos del mapa muestran al pasar el cursor el nombre de la finca y el propietario. Al tocar un punto en móvil, el panel también identifica ambos datos.
-- Los marcadores son más visibles y el mapa acerca hasta zoom 18 cuando la distribución de las fincas lo permite. Si las fincas están muy separadas, mantiene el encuadre necesario para mostrarlas todas.
-- Al guardar una ubicación general en una variedad, se comparte la latitud y longitud con los demás registros de la misma finca y propietario, siempre que no tengan ya ubicación. Si falta el propietario, se exige coincidencia de municipio para evitar asignaciones dudosas.
-- La ubicación compartida solo copia coordenadas generales. No copia polígono, parcela, recinto, uso SIGPAC ni superficie.
-- Cuando más adelante se georreferencien los recintos, cada parcela podrá tener sus propias coordenadas y referencias SIGPAC. El punto general de la finca se deja de mostrar si existen coordenadas de parcela más precisas en ese registro.
-- Los registros con ubicaciones propias no se sobrescriben.
+- El mapa SIGPAC muestra etiquetas de pueblos y localidades sobre el satélite mediante una capa transparente. La capa puede activarse o desactivarse desde el selector de capas.
+- Buscador integrado de pueblos, municipios y lugares. Escribe el nombre, pulsa Buscar y selecciona el resultado para centrar el mapa y acercarte a la zona. La búsqueda utiliza Nominatim de OpenStreetMap y requiere conexión.
+- Botón Google Maps: abre una búsqueda externa del texto escrito. Google Maps no devuelve automáticamente las coordenadas a Fincas; para guardar una posición exacta, selecciona el punto en el mapa integrado o usa Mi GPS y guarda la ubicación.
+- Botón Mi GPS para centrar la posición actual del móvil. Requiere permiso de ubicación y conexión segura (HTTPS).
+- Al guardar una ubicación general, se propaga a todos los registros que tengan exactamente el mismo nombre de finca y el mismo propietario (normalizados, sin diferencias de mayúsculas/acentos). No se usa coincidencia aproximada ni se asigna si falta el propietario.
+- La propagación actualiza solo la ubicación general. No modifica registros que ya tienen coordenadas propias de parcelas SIGPAC; tampoco copia polígono, parcela, recinto, uso ni superficie.
+- Los recintos SIGPAC se seguirán identificando por separado tocando el interior de la parcela.
 
 Instalación:
 1. Descarga una copia de seguridad desde Fincas.
 2. Sustituye los archivos del repositorio por los incluidos en este ZIP.
 3. Publica los cambios en GitHub Pages.
-4. Cierra y vuelve a abrir la aplicación. Si aparece la versión anterior, recarga la página para actualizar la caché.
+4. Cierra y vuelve a abrir la aplicación. Si aparece la versión anterior, recarga para actualizar la caché.
 
 Importante:
-- La ubicación se comparte al guardar la ficha (y también mediante el autoguardado).
-- La coincidencia se realiza por nombre normalizado de finca y propietario; cuando no hay propietario en ambos registros, se requiere coincidencia de municipio. Si el nombre de la finca o el propietario están escritos de forma diferente, no se compartirá automáticamente.
 - No se ha publicado en GitHub Pages ni se ha probado contra la cuenta real de Supabase.
+- La búsqueda de lugares depende de Nominatim y de los límites de uso del servicio; se ejecuta solo cuando el usuario pulsa Buscar.
+- Google Maps se abre como búsqueda externa; por limitaciones del navegador no se puede leer automáticamente la coordenada seleccionada dentro de Google Maps.
 
-Versión 2.33 — Base de trabajo: Fincas 2.32.
+Versión 2.34 — Base de trabajo: Fincas 2.33.

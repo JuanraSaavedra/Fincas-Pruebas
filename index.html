@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f7d32"><link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>Fincas 2.33 · Cítricos</title>
+<title>Fincas 2.34 · Cítricos</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{--bg:#f6f7f2;--card:#fff;--tx:#1d2a1a;--mu:#6b7a66;--ac:#e8820c;--ac2:#2f7d32;--bd:#dde2d6;--dn:#c0392b}
@@ -53,11 +53,14 @@ header h1{display:flex;align-items:baseline;gap:7px}
 .mtop{display:flex;gap:8px;align-items:center;background:linear-gradient(120deg,#124c3c,#247953);color:#fff;padding:calc(8px + env(safe-area-inset-top)) 10px 8px}
 .mtop b{flex:1;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mtop button{background:rgba(255,255,255,.2);min-height:38px;padding:6px 10px}
 #mapa{flex:1;min-height:0}
+.map-search{display:flex;gap:6px;padding:7px 9px;background:var(--card);border-bottom:1px solid var(--bd);z-index:1001}
+.map-search input{min-width:0;flex:1;min-height:40px;padding:7px 9px;font-size:14px}
+.map-search button{flex:0 0 auto;min-height:40px;padding:7px 10px;font-size:13px;white-space:nowrap}
 .mpan{padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--bd)}
 .mpan .row{margin-top:8px}
 .pin{background:none;border:0}.pinx{position:absolute;left:-14px;top:-34px;font-size:30px;line-height:1;filter:drop-shadow(0 1px 2px #000)}
 .pint{position:absolute;left:14px;top:-30px;white-space:nowrap;background:#fffffff2;color:#111;border-radius:8px;padding:1px 7px;font-size:12px;font-weight:700;box-shadow:0 1px 4px #0007}
-.map-actions{position:absolute;right:12px;top:75px;z-index:1000;display:flex;flex-direction:column;gap:8px;max-width:175px}
+.map-actions{position:absolute;right:12px;top:126px;z-index:1000;display:flex;flex-direction:column;gap:8px;max-width:175px}
 .map-actions button{background:#fff;color:#164c37;border:1px solid #c9d6cb;border-radius:12px;padding:9px;box-shadow:0 2px 9px #0004;font-size:13px;min-height:42px}
 .map-actions button.active{background:#1f754b;color:#fff}
 .map-coords{font-size:12px;overflow-wrap:anywhere;margin-top:5px}
@@ -122,7 +125,7 @@ label{font-weight:750;font-size:14px}
 .search-main button{width:100%;min-height:46px;padding:9px 10px;white-space:nowrap;display:flex;align-items:center;justify-content:center}
 @media(max-width:430px){.search-main{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.search-main input{grid-column:1/-1}.search-main button{width:100%}}
 </style></head><body>
-<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.33</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
+<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.34</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
 <main id="app"></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -250,16 +253,39 @@ function abrirMapa(o){
   if(!window.L)return toast('No se pudo cargar el mapa. Comprueba la conexión a Internet.');
   const ov=document.createElement('div');ov.id='mapov';
   const elegir=o.modo==='elegir';
-  ov.innerHTML=`<div class="mtop"><b>${esc(o.titulo||'Mapa')}</b><button id="mx">✕</button></div><div id="mapa"></div><div class="map-actions"><button type="button" id="mgps">📍 Reubicar GPS</button><button type="button" id="mcentrar">🎯 Centrar</button>${elegir?'<button type="button" id="majustar">✋ Ajustar marcador</button><button type="button" id="mguardar">💾 Guardar ubicación</button>':''}</div><div class="mpan" id="mpan">${elegir?'<span class="mu">Toca la parcela en el mapa. Se rellenarán provincia, municipio, polígono, parcela y recinto.</span>':'<span class="mu">Pasa el cursor sobre un punto para identificar la finca. En móvil, toca el punto; vuelve a tocarlo para abrir su ubicación en Google Maps.</span>'}</div>`;
+  ov.innerHTML=`<div class="mtop"><b>${esc(o.titulo||'Mapa')}</b><button id="mx">✕</button></div><div class="map-search"><input id="mplace" type="search" placeholder="Buscar pueblo, municipio o lugar…" autocomplete="off"><button type="button" id="msearch">Buscar</button><button type="button" id="mgmaps">Google Maps</button></div><div id="mapa"></div><div class="map-actions"><button type="button" id="mgps">📍 Mi GPS</button><button type="button" id="mcentrar">🎯 Centrar</button>${elegir?'<button type="button" id="majustar">✋ Ajustar marcador</button><button type="button" id="mguardar">💾 Guardar ubicación</button>':''}</div><div class="mpan" id="mpan">${elegir?'<span class="mu">Busca el pueblo o usa «Mi GPS». Después toca el punto exacto de la parcela para consultar SIGPAC o guarda la ubicación general.</span>':'<span class="mu">Los nombres de pueblos aparecen sobre el satélite. Busca una localidad, pasa el cursor por un punto para identificar la finca o tócalo para ver sus datos.</span>'}</div>`;
   document.body.appendChild(ov);
   const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:19,maxZoom:21,attribution:'Imágenes © Esri'});
   const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxNativeZoom:19,maxZoom:21,attribution:'© OpenStreetMap'});
   const rec=L.tileLayer.wms(SIG_WMS,{layers:'AU.Sigpac:recinto',format:'image/png',transparent:true,version:'1.3.0',maxZoom:21,zIndex:5,attribution:'Recintos © FEGA / MAPA'});
-  const map=L.map('mapa',{layers:[sat,rec],maxZoom:21}).setView([37.4,-5.9],9);
-  L.control.layers({'Satélite':sat,'Mapa':osm},{'Recintos SIGPAC':rec},{collapsed:true}).addTo(map);
+  // Etiquetas transparentes de localidades sobre la imagen de satélite y los recintos.
+  const map=L.map('mapa',{layers:[sat,rec],maxZoom:21,zoomControl:true});
+  map.createPane('townLabels');map.getPane('townLabels').style.zIndex=450;
+  const townLabels=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxNativeZoom:19,maxZoom:21,opacity:.96,pane:'townLabels',attribution:'Etiquetas © OpenStreetMap / CARTO'}).addTo(map);
+  L.control.layers({'Satélite':sat,'Mapa':osm},{'Recintos SIGPAC':rec,'Nombres de pueblos':townLabels},{collapsed:true}).addTo(map);
+  map.attributionControl.addAttribution('Búsqueda de lugares © OpenStreetMap contributors');
+  map.setView([37.4,-5.9],9);
   const cerrar=()=>{try{map.remove()}catch{}ov.remove()};
   $('#mx').onclick=cerrar;
   const panel=h=>{$('#mpan').innerHTML=h;setTimeout(()=>map.invalidateSize(),50)};
+  // Búsqueda de pueblos y lugares mediante Nominatim (una petición solo al pulsar Buscar).
+  const buscarLugar=async()=>{
+    const q=$('#mplace').value.trim();if(!q)return toast('Escribe un pueblo, municipio o lugar.');
+    const b=$('#msearch');b.disabled=true;b.textContent='Buscando…';
+    try{
+      const url='https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=es&q='+encodeURIComponent(q);
+      const r=await fetch(url,{headers:{'Accept':'application/json'}});if(!r.ok)throw Error('HTTP '+r.status);
+      const data=await r.json();if(!data.length){panel('<b>No se encontraron resultados</b><div class="mu">Prueba con el nombre del pueblo y la provincia.</div>');return}
+      panel('<b>Resultados de búsqueda</b>'+data.map((x,i)=>`<button type="button" class="s mresult" data-result="${i}" style="display:block;width:100%;text-align:left;margin-top:6px;white-space:normal">${esc(x.display_name)}</button>`).join('')+'<div class="mu" style="margin-top:7px">Selecciona un resultado para centrar el mapa. Después podrás ajustar el punto exacto.</div>');
+      document.querySelectorAll('.mresult').forEach(el=>el.onclick=()=>{
+        const x=data[+el.dataset.result],ll=[+x.lat,+x.lon];map.setView(ll,17);
+        panel(`<b>${esc(x.name||x.display_name.split(',')[0])}</b><div class="mu">${esc(x.display_name)}</div><div class="mu">Zona localizada. Acerca el mapa y toca el punto exacto de la finca; el centro del pueblo es solo una referencia y no se guardará como ubicación de la explotación.</div>`);
+      });
+    }catch(err){panel('<b>No se pudo buscar el lugar</b><div class="mu">Comprueba la conexión e inténtalo de nuevo ('+esc(err.message||err)+').</div>')}
+    finally{b.disabled=false;b.textContent='Buscar'}
+  };
+  $('#msearch').onclick=buscarLugar;$('#mplace').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();buscarLugar()}});
+  $('#mgmaps').onclick=()=>{const q=$('#mplace').value.trim();if(!q)return toast('Escribe primero el nombre del pueblo o lugar.');window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q),'_blank','noopener')};
   // posición del usuario
   let yo=null,yoc=null,ultimaGPS=null;
   const ubicar=async(centrar)=>{
@@ -350,12 +376,10 @@ function status(){const el=$('#net');if(el)el.textContent=(navigator.onLine?'●
 window.addEventListener('online',()=>{status();syncPending()});window.addEventListener('offline',status);
 function queueSave(f,row){const id=f.id||crypto.randomUUID(),item={kind:'finca',id,row,isNew:!f.id};pendingSync=pendingSync.filter(x=>x.id!==id);pendingSync.push(item);if(!setStored(QUEUE_KEY,pendingSync))return null;const existing=fincas.findIndex(x=>x.id===id);const updated={...f,...row,id,anotaciones:f.anotaciones||[],_pending:true};if(existing>=0)fincas[existing]=updated;else fincas.push(updated);setStored(CACHE_KEY,fincas);status();return id}
 function mismaFincaVariedades(a,b){
-  if(normaliza(a.finca)!==normaliza(b.finca)||!normaliza(a.finca))return false;
-  const oa=normaliza(a.propietarios),ob=normaliza(b.propietarios);
-  const ma=munis(a).map(normaliza).filter(Boolean),mb=munis(b).map(normaliza).filter(Boolean);
-  const mismoMunicipio=!ma.length||!mb.length||ma.some(x=>mb.includes(x));
-  if(oa&&ob)return oa===ob&&mismoMunicipio;
-  return !!(ma.length&&mb.length&&ma.some(x=>mb.includes(x)));
+  const fincaA=normaliza(a.finca),fincaB=normaliza(b.finca);
+  const propA=normaliza(a.propietarios),propB=normaliza(b.propietarios);
+  // Solo se comparte si coinciden ambos datos y ninguno está vacío.
+  return !!(fincaA&&propA&&fincaA===fincaB&&propA===propB);
 }
 // La coordenada general se comparte entre variedades de la misma finca; nunca se copian referencias SIGPAC.
 function propagarUbicacionFinca(origen,lat,lng){
@@ -364,7 +388,9 @@ function propagarUbicacionFinca(origen,lat,lng){
   for(const hermana of fincas){
     if(hermana.id===origen.id||!mismaFincaVariedades(origen,hermana))continue;
     const tieneCoordParcela=Array.isArray(hermana.parcelas)&&hermana.parcelas.some(geolocalizable);
-    if(hasGeo(hermana)||tieneCoordParcela)continue;
+    // No tocar parcelas ya georreferenciadas: solo actualizar la ubicación general.
+    if(tieneCoordParcela)continue;
+    if(num(hermana.lat)===num(lat)&&num(hermana.lng)===num(lng))continue;
     if(queueSave(hermana,{lat:num(lat),lng:num(lng)}))total++;
   }
   return total;
@@ -482,7 +508,7 @@ function render(){
   if(view==='login')return login(app);if(view==='list')return list(app);if(view==='detail')return detail(app);if(view==='mad')return mad(app);if(view==='madform')return madform(app);form(app);
 }
 function login(app){
-  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.33</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
+  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.34</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
   const go=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
   $('#go').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};
 }
