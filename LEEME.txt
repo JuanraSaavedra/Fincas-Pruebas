@@ -1,32 +1,26 @@
-FINCAS 2.30 — Búsqueda avanzada y listados por propietario, finca y variedad
+FINCAS 2.31 — Búsqueda con botón y coincidencias parciales
 
 Novedades:
-- Filtros independientes para propietario, finca, variedad y municipio.
-- Los filtros se pueden combinar entre sí.
-- Búsqueda libre por finca, propietario, variedad, patrón, municipio, polígono y parcela.
-- Ordenación del listado por finca, propietario o variedad.
-- Botón para limpiar todos los filtros de una vez.
-- Exportación PDF, CSV y Excel limitada a los registros que coinciden con los filtros activos.
-- El PDF muestra los criterios aplicados, número de registros, superficie y árboles totales.
-- La búsqueda y los listados funcionan aunque las fincas todavía no tengan coordenadas ni recintos SIGPAC.
-
-Instalación:
-1. Descarga y conserva una copia de seguridad de tus datos.
-2. Descomprime el ZIP y sustituye los archivos del repositorio de GitHub Pages por los incluidos.
-3. Publica los cambios y espera a que GitHub Pages termine.
-4. Cierra y vuelve a abrir Fincas. Si ves la versión anterior, recarga para activar el nuevo caché.
+- Botón visible «Buscar» junto al campo de búsqueda.
+- La búsqueda se ejecuta al pulsar Buscar o Intro; escribir no provoca recargas de pantalla.
+- Admite asteriscos como comodines: *palabra* encuentra cualquier registro que contenga «palabra».
+- También admite comodines intermedios, por ejemplo naran*late.
+- La búsqueda sin asteriscos sigue buscando el texto contenido en cualquier parte del registro.
+- La búsqueda no distingue mayúsculas/minúsculas ni acentos.
+- Se mantienen los filtros combinables por propietario, finca, variedad y municipio, y las exportaciones del resultado filtrado.
 
 Uso:
-1. En el listado principal escribe texto en la búsqueda libre o selecciona Propietario, Finca, Variedad y/o Municipio.
-2. Elige cómo ordenar: por Finca, Propietario o Variedad.
-3. La pantalla muestra solo los registros coincidentes y actualiza superficie y árboles.
-4. Pulsa PDF, CSV o Excel para exportar únicamente ese resultado filtrado.
-5. Usa «Limpiar filtros» para volver a mostrar todas las fincas.
+1. Escribe el texto en el campo superior.
+2. Pulsa «Buscar» o Intro.
+3. Para coincidencia parcial, escribe por ejemplo *Lane* o *Powell*.
+4. Combina la búsqueda con los selectores de propietario, finca, variedad y municipio si lo necesitas.
+5. «Limpiar filtros» borra la búsqueda y todos los selectores.
 
-Notas:
-- Los filtros de propietario y finca seleccionan el valor exacto guardado en la ficha.
-- Si un mismo nombre de finca tiene varias fichas por variedad o propietario, se mantienen como registros independientes.
-- No se requiere SIGPAC ni ubicación para buscar, filtrar o exportar.
-- No se ha publicado en GitHub Pages ni se ha probado contra la cuenta real de Supabase. Realiza una copia de seguridad antes de sustituir la versión actual.
+Instalación:
+1. Descarga una copia de seguridad antes de actualizar.
+2. Sustituye los archivos del repositorio por los incluidos en este ZIP.
+3. Publica los cambios en GitHub Pages y recarga la aplicación.
 
-Versión 2.30 — Base de trabajo: Fincas 2.29 facilitada por el usuario.
+Nota: la búsqueda trabaja con los datos que ya existen en las fichas. No necesita ubicaciones ni recintos SIGPAC. No se ha publicado en GitHub Pages ni se ha probado contra la cuenta real de Supabase.
+
+Versión 2.31 — Base de trabajo: Fincas 2.30.
