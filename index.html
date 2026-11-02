@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f7d32"><link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>Fincas 2.31 · Cítricos</title>
+<title>Fincas 2.32 · Cítricos</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{--bg:#f6f7f2;--card:#fff;--tx:#1d2a1a;--mu:#6b7a66;--ac:#e8820c;--ac2:#2f7d32;--bd:#dde2d6;--dn:#c0392b}
@@ -81,9 +81,9 @@ input::placeholder,textarea::placeholder{color:#7f9179}
 .home-tools button.s,.mad-tools button.s{width:100%;min-width:0;min-height:48px;padding:5px 3px;font-size:23px;line-height:1.2;border-radius:12px}
 .home-tools button.armed,.mad-tools button.armed{outline:3px solid var(--ac);background:#fff1d9;color:#183c2d}
 /* Etiquetas HTML reales: visibles incluso en Safari/iOS, no pseudo-elementos */
-.home-tools button.s,.mad-tools button.s{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:64px;padding:6px 2px;font-size:inherit;line-height:1.1}
-.home-tools .tool-icon,.mad-tools .tool-icon{display:block;font-size:23px;line-height:1.1}
-.home-tools .tool-label,.mad-tools .tool-label{display:block!important;visibility:visible!important;opacity:1!important;font-size:11px;line-height:1.2;font-weight:700;white-space:nowrap}
+.home-tools button.s,.mad-tools button.s{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:52px;padding:4px 2px;font-size:inherit;line-height:1.05}
+.home-tools .tool-icon,.mad-tools .tool-icon{display:block;font-size:18px;line-height:1}
+.home-tools .tool-label,.mad-tools .tool-label{display:block!important;visibility:visible!important;opacity:1!important;font-size:10px;line-height:1.1;font-weight:700;white-space:nowrap}
 .home-tools .fi{position:absolute}
 @media(max-width:370px){.home-tools,.mad-tools{gap:5px}.home-tools .tool-label,.mad-tools .tool-label{font-size:10px}}
 
@@ -116,14 +116,13 @@ label{font-weight:750;font-size:14px}
 @media(min-width:620px){.filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:390px){.filter-grid{gap:5px 7px}.filter-grid select{font-size:14px;padding:8px 6px}}
 
-/* Fincas 2.31: búsqueda explícita y comodines */
-.search-main{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;margin-bottom:8px}
+/* Fincas 2.32: botones Buscar y Nueva uniformes */
+.search-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,140px) minmax(112px,140px);gap:8px;align-items:center;margin-bottom:8px}
 .search-main input{min-width:0}
-.search-main #searchBtn{white-space:nowrap}
-.search-main #new{white-space:nowrap}
-@media(max-width:430px){.search-main{grid-template-columns:minmax(0,1fr) auto}.search-main input{grid-column:1/-1}.search-main button{width:100%}}
+.search-main button{width:100%;min-height:46px;padding:9px 10px;white-space:nowrap;display:flex;align-items:center;justify-content:center}
+@media(max-width:430px){.search-main{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.search-main input{grid-column:1/-1}.search-main button{width:100%}}
 </style></head><body>
-<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.31</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
+<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.32</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
 <main id="app"></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -251,7 +250,7 @@ function abrirMapa(o){
   if(!window.L)return toast('No se pudo cargar el mapa. Comprueba la conexión a Internet.');
   const ov=document.createElement('div');ov.id='mapov';
   const elegir=o.modo==='elegir';
-  ov.innerHTML=`<div class="mtop"><b>${esc(o.titulo||'Mapa')}</b><button id="mx">✕</button></div><div id="mapa"></div><div class="map-actions"><button type="button" id="mgps">📍 Reubicar GPS</button><button type="button" id="mcentrar">🎯 Centrar</button>${elegir?'<button type="button" id="majustar">✋ Ajustar marcador</button><button type="button" id="mguardar">💾 Guardar ubicación</button>':''}</div><div class="mpan" id="mpan">${elegir?'<span class="mu">Toca la parcela en el mapa. Se rellenarán provincia, municipio, polígono, parcela y recinto.</span>':'<span class="mu">Toca una chincheta para ver la finca.</span>'}</div>`;
+  ov.innerHTML=`<div class="mtop"><b>${esc(o.titulo||'Mapa')}</b><button id="mx">✕</button></div><div id="mapa"></div><div class="map-actions"><button type="button" id="mgps">📍 Reubicar GPS</button><button type="button" id="mcentrar">🎯 Centrar</button>${elegir?'<button type="button" id="majustar">✋ Ajustar marcador</button><button type="button" id="mguardar">💾 Guardar ubicación</button>':''}</div><div class="mpan" id="mpan">${elegir?'<span class="mu">Toca la parcela en el mapa. Se rellenarán provincia, municipio, polígono, parcela y recinto.</span>':'<span class="mu">Pasa el cursor sobre un punto para identificar la finca. En móvil, toca el punto; vuelve a tocarlo para abrir su ubicación en Google Maps.</span>'}</div>`;
   document.body.appendChild(ov);
   const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:19,maxZoom:21,attribution:'Imágenes © Esri'});
   const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxNativeZoom:19,maxZoom:21,attribution:'© OpenStreetMap'});
@@ -312,18 +311,30 @@ function abrirMapa(o){
     items.forEach(it=>{const {f,p,i,ll,lab}=it;pts.push(ll);
       const color=fincaColores[i%fincaColores.length];
       const m=L.circleMarker(ll,{radius:8,color:'#fff',weight:2,fillColor:color,fillOpacity:1}).addTo(layers);
-      m.bindTooltip(lab,{direction:'top'});
-      const abrirFicha=()=>{panel(`<b>${esc(lab)}</b><div class="mu">${esc([f.variedad,p&&p.municipio?p.municipio:f.municipio,(p&&num(p.superficie)?p.superficie:(f.superficie||0))+' ha'].filter(Boolean).join(' · '))}</div><div class="row w"><button id="mfi">Abrir ficha</button><button id="mkml">🌎 Google Earth</button></div>`);
-        $('#mfi').onclick=()=>{cerrar();cur=f.id;view='detail';render()};$('#mkml').onclick=()=>exportKml([f])};
+      m.bindTooltip(lab,{direction:'top',sticky:true,opacity:.98});
+      const abrirUbicacion=()=>{
+        const url=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ll[0]+','+ll[1])}`;
+        window.open(url,'_blank','noopener');
+      };
+      let ultimoToque=0;
+      const abrirFicha=()=>{
+        const ahora=Date.now();
+        if(ahora-ultimoToque<4500){abrirUbicacion();ultimoToque=0;return}
+        ultimoToque=ahora;
+        panel(`<b>📍 ${esc(lab)}</b><div class="mu">${esc([f.variedad,p&&p.municipio?p.municipio:f.municipio,(p&&num(p.superficie)?p.superficie:(f.superficie||0))+' ha'].filter(Boolean).join(' · '))}</div><div class="mu map-coords">${ll[0].toFixed(6)}, ${ll[1].toFixed(6)}</div><div class="row w"><button id="mfi">Abrir ficha</button><button id="mgo">Abrir ubicación</button><button id="mkml">🌎 Google Earth</button></div><div class="mu">Vuelve a tocar el mismo punto para abrir Google Maps.</div>`);
+        $('#mfi').onclick=()=>{cerrar();cur=f.id;view='detail';render()};$('#mgo').onclick=abrirUbicacion;$('#mkml').onclick=()=>exportKml([f]);
+      };
       m.on('click',abrirFicha);
       if(p)geometriaRecinto(p).then(rings=>{
         if(!rings||!document.body.contains(ov))return;
         const poly=L.polygon(rings,{color,weight:3,fillColor:color,fillOpacity:.19}).addTo(layers);
-        poly.on('click',abrirFicha);poly.bindTooltip(lab,{direction:'top'});
+        poly.bindTooltip(lab,{direction:'top',sticky:true,opacity:.98});
+        poly.on('click',abrirFicha);
       });
     });
     const leyenda=fincasVista.map((f,i)=>`<span style="display:inline-block;margin:3px 8px 3px 0"><span style="color:${fincaColores[i%fincaColores.length]}">●</span> ${esc(f.finca)}</span>`).join('');
-    panel(`<b>🌍 ${fincasVista.length} fincas · ${items.length} ubicaciones</b><div class="mu">Los límites se dibujan cuando SIGPAC devuelve la geometría del recinto. Si no está disponible, se muestra su punto GPS.</div><div style="max-height:90px;overflow:auto;font-size:12px">${leyenda}</div><div class="row"><button id="mkmlall">🌎 Exportar a Google Earth</button></div>`);
+    const sinUbicacion=fincasVista.filter(f=>!hasGeo(f)&&!parcelasDe(f).some(geolocalizable)).length;
+    panel(`<b>🌍 ${fincasVista.length} fincas · ${items.length} puntos/recintos visibles</b><div class="mu">Solo aparecen fincas que ya tienen coordenadas guardadas en su ficha o en alguna parcela. Los límites se dibujan cuando SIGPAC devuelve la geometría del recinto. ${sinUbicacion?sinUbicacion+' fincas todavía no tienen ubicación y no se muestran en el mapa.':''}</div><div class="mu">Pasa el cursor por un punto para ver el nombre. En móvil, tócalo y vuelve a tocarlo para abrir su ubicación en Google Maps.</div><div style="max-height:90px;overflow:auto;font-size:12px">${leyenda}</div><div class="row"><button id="mkmlall">🌎 Exportar a Google Earth</button></div>`);
     $('#mkmlall').onclick=()=>exportKml(fincasVista);
     if(!pts.length){toast('Ninguna finca tiene coordenadas todavía.');ubicar(true)}
     else if(pts.length===1){map.setView(pts[0],17);ubicar(false)}
@@ -450,7 +461,7 @@ function render(){
   if(view==='login')return login(app);if(view==='list')return list(app);if(view==='detail')return detail(app);if(view==='mad')return mad(app);if(view==='madform')return madform(app);form(app);
 }
 function login(app){
-  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.31</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
+  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.32</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
   const go=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
   $('#go').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};
 }

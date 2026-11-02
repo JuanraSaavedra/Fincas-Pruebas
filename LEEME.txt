@@ -1,26 +1,22 @@
-FINCAS 2.31 — Búsqueda con botón y coincidencias parciales
+FINCAS 2.32 — Ajustes de botones y mapa de fincas
 
 Novedades:
-- Botón visible «Buscar» junto al campo de búsqueda.
-- La búsqueda se ejecuta al pulsar Buscar o Intro; escribir no provoca recargas de pantalla.
-- Admite asteriscos como comodines: *palabra* encuentra cualquier registro que contenga «palabra».
-- También admite comodines intermedios, por ejemplo naran*late.
-- La búsqueda sin asteriscos sigue buscando el texto contenido en cualquier parte del registro.
-- La búsqueda no distingue mayúsculas/minúsculas ni acentos.
-- Se mantienen los filtros combinables por propietario, finca, variedad y municipio, y las exportaciones del resultado filtrado.
-
-Uso:
-1. Escribe el texto en el campo superior.
-2. Pulsa «Buscar» o Intro.
-3. Para coincidencia parcial, escribe por ejemplo *Lane* o *Powell*.
-4. Combina la búsqueda con los selectores de propietario, finca, variedad y municipio si lo necesitas.
-5. «Limpiar filtros» borra la búsqueda y todos los selectores.
+- Los botones «Buscar» y «Nueva» tienen ahora el mismo ancho y alto, tanto en móvil como en pantallas grandes.
+- Los botones de herramientas con iconos (Mapa, Earth, PDF, CSV, Excel, Copia, Restaurar, Importar y Ayuda) son más compactos.
+- En el mapa integrado, los puntos y recintos con coordenadas guardadas muestran el nombre de la finca al pasar el cursor.
+- En móvil, el primer toque sobre un punto muestra los datos; un segundo toque sobre el mismo punto abre su posición en Google Maps. También hay un botón explícito «Abrir ubicación».
+- El mapa informa de cuántas fincas no tienen todavía coordenadas y por tanto no pueden aparecer. No se geolocalizan fincas por aproximación ni por el nombre.
+- Las ubicaciones pueden proceder de las coordenadas de la ficha o de las parcelas/recintos.
 
 Instalación:
-1. Descarga una copia de seguridad antes de actualizar.
+1. Descarga una copia de seguridad desde Fincas.
 2. Sustituye los archivos del repositorio por los incluidos en este ZIP.
-3. Publica los cambios en GitHub Pages y recarga la aplicación.
+3. Publica los cambios en GitHub Pages.
+4. Cierra la aplicación y vuelve a abrirla. Si el dispositivo conserva la versión anterior, recarga la página para que se actualice la caché.
 
-Nota: la búsqueda trabaja con los datos que ya existen en las fichas. No necesita ubicaciones ni recintos SIGPAC. No se ha publicado en GitHub Pages ni se ha probado contra la cuenta real de Supabase.
+Importante:
+- El mapa integrado utiliza cartografía satélite de Esri y capas SIGPAC, no el mapa base de Google. Los puntos permiten abrir Google Maps con las coordenadas exactas guardadas.
+- Solo se muestran puntos cuando existen coordenadas explícitas. Las fincas sin ubicación seguirán en el listado hasta que se complete su georreferencia.
+- No se ha publicado en GitHub Pages ni se ha probado contra la cuenta real de Supabase.
 
-Versión 2.31 — Base de trabajo: Fincas 2.30.
+Versión 2.32 — Base de trabajo: Fincas 2.31.
