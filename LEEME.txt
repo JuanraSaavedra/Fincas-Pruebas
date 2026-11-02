@@ -1,18 +1,11 @@
-FINCAS 2.26 — Mejora de legibilidad del listado PDF
-
-Cambios en el PDF del listado de fincas:
-- Más separación entre el título, los filtros y la tabla.
-- Encabezados más altos, con el texto centrado y separado de los datos.
-- Más espacio vertical dentro de cada fila y ajuste de líneas para textos largos.
-- Letra y contraste uniformes, filas alternas y separadores finos para seguir cada registro.
-- Se mantiene el encabezado “Término municipal” y la función de compartir una finca en PDF.
-
-Instalación:
-1. Haz una copia de seguridad de los datos antes de cambiar archivos.
-2. Sustituye los archivos del paquete en el repositorio, conservando la configuración y los iconos incluidos.
-3. Publica los cambios en GitHub Pages.
-4. Abre la aplicación y genera un listado PDF para revisar la presentación.
-
-Importante: esta versión se ha comprobado sintácticamente, pero no se ha probado visualmente con datos reales ni se ha publicado automáticamente en GitHub Pages.
-
-Version 2.28: croquis SIGPAC con rellenos de colores suaves y contornos resaltados.
+Fincas 2.24
+- Fichas y registros con tipografía, etiquetas y bloques de datos más legibles.
+- Importación de fincas desde Excel (.xlsx/.xls) y CSV.
+- Reconoce encabezados habituales en español y permite previsualizar/revisar el resumen antes de confirmar.
+- Omite coincidencias exactas por finca + propietario + variedad + municipio; no elimina ni modifica registros existentes.
+- Conserva provincia, número de árboles, marco original y año de plantación como datos de origen en la ficha.
+- No asigna coordenadas ni datos SIGPAC automáticamente.
+- Para importar una base de Microsoft Access (.mdb/.accdb), expórtala primero desde Access a Excel o CSV y después usa Importar.
+- La opción Restaurar sigue reservada a copias completas creadas por Fincas.
+- Copia manual en CopiaSeguridadFincas.xlsx; guárdala en iCloud Drive.
+- No se incluyen binarios de fotografías en las copias.
