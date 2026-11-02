@@ -1,22 +1,22 @@
-FINCAS 2.32 — Ajustes de botones y mapa de fincas
+FINCAS 2.33 — Identificación del mapa y ubicación compartida por variedades
 
 Novedades:
-- Los botones «Buscar» y «Nueva» tienen ahora el mismo ancho y alto, tanto en móvil como en pantallas grandes.
-- Los botones de herramientas con iconos (Mapa, Earth, PDF, CSV, Excel, Copia, Restaurar, Importar y Ayuda) son más compactos.
-- En el mapa integrado, los puntos y recintos con coordenadas guardadas muestran el nombre de la finca al pasar el cursor.
-- En móvil, el primer toque sobre un punto muestra los datos; un segundo toque sobre el mismo punto abre su posición en Google Maps. También hay un botón explícito «Abrir ubicación».
-- El mapa informa de cuántas fincas no tienen todavía coordenadas y por tanto no pueden aparecer. No se geolocalizan fincas por aproximación ni por el nombre.
-- Las ubicaciones pueden proceder de las coordenadas de la ficha o de las parcelas/recintos.
+- Los puntos del mapa muestran al pasar el cursor el nombre de la finca y el propietario. Al tocar un punto en móvil, el panel también identifica ambos datos.
+- Los marcadores son más visibles y el mapa acerca hasta zoom 18 cuando la distribución de las fincas lo permite. Si las fincas están muy separadas, mantiene el encuadre necesario para mostrarlas todas.
+- Al guardar una ubicación general en una variedad, se comparte la latitud y longitud con los demás registros de la misma finca y propietario, siempre que no tengan ya ubicación. Si falta el propietario, se exige coincidencia de municipio para evitar asignaciones dudosas.
+- La ubicación compartida solo copia coordenadas generales. No copia polígono, parcela, recinto, uso SIGPAC ni superficie.
+- Cuando más adelante se georreferencien los recintos, cada parcela podrá tener sus propias coordenadas y referencias SIGPAC. El punto general de la finca se deja de mostrar si existen coordenadas de parcela más precisas en ese registro.
+- Los registros con ubicaciones propias no se sobrescriben.
 
 Instalación:
 1. Descarga una copia de seguridad desde Fincas.
 2. Sustituye los archivos del repositorio por los incluidos en este ZIP.
 3. Publica los cambios en GitHub Pages.
-4. Cierra la aplicación y vuelve a abrirla. Si el dispositivo conserva la versión anterior, recarga la página para que se actualice la caché.
+4. Cierra y vuelve a abrir la aplicación. Si aparece la versión anterior, recarga la página para actualizar la caché.
 
 Importante:
-- El mapa integrado utiliza cartografía satélite de Esri y capas SIGPAC, no el mapa base de Google. Los puntos permiten abrir Google Maps con las coordenadas exactas guardadas.
-- Solo se muestran puntos cuando existen coordenadas explícitas. Las fincas sin ubicación seguirán en el listado hasta que se complete su georreferencia.
+- La ubicación se comparte al guardar la ficha (y también mediante el autoguardado).
+- La coincidencia se realiza por nombre normalizado de finca y propietario; cuando no hay propietario en ambos registros, se requiere coincidencia de municipio. Si el nombre de la finca o el propietario están escritos de forma diferente, no se compartirá automáticamente.
 - No se ha publicado en GitHub Pages ni se ha probado contra la cuenta real de Supabase.
 
-Versión 2.32 — Base de trabajo: Fincas 2.31.
+Versión 2.33 — Base de trabajo: Fincas 2.32.
