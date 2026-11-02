@@ -1,6 +1,13 @@
-FINCAS 2.35 — Acceso SIGPAC centrado en la ubicación de cada finca
+FINCAS 2.36 — Medición de superficies por variedad dentro de recintos SIGPAC
 
-Novedades:
+Novedades de esta versión:
+- Medición de superficies de variedades mediante dibujo libre con dedo/ratón o marcando puntos sucesivos.
+- Cada medición se guarda como subpolígono dentro del recinto SIGPAC, identificada por variedad, superficie y método.
+- Compara el área medida con la superficie oficial del recinto e informa de hectáreas pendientes o exceso.
+- El resumen de la ficha agrupa los recintos registrados por parcela SIGPAC y muestra superficies medidas por variedad. La suma oficial puede estar incompleta si faltan recintos por registrar.
+- Las geometrías de las mediciones vuelven a mostrarse al consultar ese recinto en el mapa.
+
+Novedades heredadas:
 - El botón SIGPAC de la ficha de una finca abre el mapa integrado de Fincas, no el visor desde la vista general de España.
 - Si la finca tiene coordenadas generales, el mapa se centra en ellas con zoom de detalle (nivel 18). Si no las tiene, utiliza la primera parcela con coordenadas guardadas.
 - Si tampoco hay coordenadas de parcelas, se abre el mapa para buscar el municipio o utilizar el GPS y guardar primero la ubicación general.
@@ -20,4 +27,16 @@ Importante:
 - Para sincronizar recintos, la tabla fincas debe tener la columna JSONB parcelas utilizada por las versiones anteriores.
 - La consulta por coordenada de SIGPAC puede devolver solo parte de los recintos de una parcela; comprueba que has identificado todos antes de darla por completa.
 
-Versión 2.35 — Base de trabajo: Fincas 2.34.
+Versión 2.36 — Base de trabajo: Fincas 2.35.
+
+
+Novedades Fincas 2.36 — Medición de superficies por variedad
+- Desde la pestaña SIGPAC de una finca, toca un recinto para consultar sus datos y pulsa «Medir variedad».
+- Dos métodos: marcar puntos sucesivos o dibujar a mano arrastrando el dedo/ratón por el perímetro.
+- Se calcula la superficie dibujada en hectáreas y se guarda como medición independiente dentro del recinto SIGPAC, con variedad, geometría y método.
+- Se conserva la superficie oficial del recinto SIGPAC; no se reemplaza por la superficie dibujada.
+- Se informa de la superficie pendiente de asignar o del exceso cuando las mediciones acumuladas no coinciden con la superficie oficial del recinto.
+- Las mediciones se guardan en la columna JSONB parcelas de la tabla fincas, dentro de cada recinto y en el array mediciones.
+- La superficie se calcula geodésicamente sobre esfera; es una medición cartográfica orientativa, no un levantamiento topográfico ni una certificación oficial.
+- Si el servicio SIGPAC no devuelve superficie oficial para el recinto, se muestra como no disponible y no se calcula superficie pendiente.
+- Recomendación: no dibujar zonas solapadas entre variedades; la aplicación avisa de diferencias de superficie, pero no detecta automáticamente solapes entre polígonos.
