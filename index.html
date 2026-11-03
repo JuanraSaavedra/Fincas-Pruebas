@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f7d32"><link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>Fincas 2.37 · Cítricos</title>
+<title>Fincas 2.38 · Cítricos</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{--bg:#f6f7f2;--card:#fff;--tx:#1d2a1a;--mu:#6b7a66;--ac:#e8820c;--ac2:#2f7d32;--bd:#dde2d6;--dn:#c0392b}
@@ -125,7 +125,7 @@ label{font-weight:750;font-size:14px}
 .search-main button{width:100%;min-height:46px;padding:9px 10px;white-space:nowrap;display:flex;align-items:center;justify-content:center}
 @media(max-width:430px){.search-main{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.search-main input{grid-column:1/-1}.search-main button{width:100%}}
 
-/* Fincas 2.37: corrección importación Excel */
+/* Fincas 2.38: corrección importación Excel */
 .measure-help{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:9px;margin:7px 0;font-size:13px}
 .measure-points{color:#155e43;font-weight:800}
 .measure-summary{border:1px solid var(--bd);border-radius:10px;padding:10px;margin:8px 0;background:var(--bg)}
@@ -133,10 +133,15 @@ label{font-weight:750;font-size:14px}
 .measurement-row{border-left:4px solid var(--ac2);padding:8px 10px;margin:7px 0;background:var(--bg);border-radius:7px}
 .measure-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
 .measure-actions button{flex:1 1 110px}
+.vertex-icon{background:#fff;border:2px solid #155e43;border-radius:50%;width:26px;height:26px;line-height:22px;text-align:center;color:#155e43;font-size:11px;font-weight:800;box-shadow:0 1px 5px #0008}
+.vertex-icon.selected{background:#f59e0b;border-color:#7c2d12;color:#fff}
+.measure-toolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px}
+.measure-toolbar button{padding:8px 5px;font-size:12px;min-height:40px}
+.measure-status{font-size:12px;color:var(--mu);margin-top:6px}
 #mapov.measure-active #mapa,#mapov.measure-active #mapa *{touch-action:none;cursor:crosshair}
 
 </style></head><body>
-<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.37</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
+<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.38</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
 <main id="app"></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -167,7 +172,12 @@ async function cargarCatalogoMunicipios(){try{const cached=JSON.parse(localStora
   try{const r=await fetch(MUNICIPIOS_URL,{cache:'no-cache'});if(!r.ok)throw Error('HTTP '+r.status);const data=await r.json();if(Array.isArray(data)&&data.length>7000){municipiosINE=data;try{localStorage.setItem(MUNICIPIOS_CACHE,JSON.stringify(data))}catch{}}}catch(e){console.warn('Catálogo de municipios no actualizado; se usa la copia local si existe.',e)}return municipiosINE}
 function buscarMunicipio(prov,nombre){const clave=nombreMunicipioClave(nombre);return municipiosINE.find(m=>m.provincia_id===prov&&(nombreMunicipioClave(m.nombre)===clave||normaliza(m.nombre)===normaliza(nombre)))}
 const normaliza=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/^(el|la|los|las)\s+/,'').replace(/\s+/g,' ');
-const VARIEDADES={Naranjas:['Navelina','Newhall','Washington Navel','Navelate','Lane Late','Powell Summer Navel','Barnfield','Chislett Summer Navel','Salustiana','Valencia Late','Valencia Midknight','Valencia Delta Seedless'],Mandarinas:['Oronules','Clemenules','Clemenvilla','Marisol','Orogrande','Orri','Tango','Nadorcott','Ortanique','Hernandina','Arrufatina']};
+const VARIEDADES={Naranjas:['Navelina','Newhall','Washington Navel','Navelate','Lane Late','Powell Summer Navel','Barnfield','Chislett Summer Navel','Rohde','Salustiana','Barberina','Valencia Late','Valencia Midknight','Valencia Delta Seedless','Midknight'],Mandarinas:['Satsuma','Oronules','Arrufatina','Marisol','Clemenules','Clemenvilla','Orogrande','Orri','Tango','Nadorcott','Ortanique','Hernandina','Nova','Leanri','Murcott'],'Otros cítricos':['Limón','Lima','Pomelo','Cidro','Kumquat']};
+const VARIEDADES_CUSTOM_KEY='fincas_variedades_citricos_personalizadas_v1';
+function variedadesPersonalizadas(){try{const a=JSON.parse(localStorage.getItem(VARIEDADES_CUSTOM_KEY)||'[]');return Array.isArray(a)?a.filter(x=>typeof x==='string'&&x.trim()):[]}catch{return []}}
+function guardarVariedadPersonalizada(v){const n=String(v||'').trim().replace(/\s+/g,' ');if(!n)return false;const all=[...Object.values(VARIEDADES).flat(),...variedadesPersonalizadas()];if(all.some(x=>normaliza(x)===normaliza(n)))return false;const a=variedadesPersonalizadas();a.push(n);localStorage.setItem(VARIEDADES_CUSTOM_KEY,JSON.stringify(a));return true}
+function todasLasVariedades(){return [...Object.values(VARIEDADES).flat(),...variedadesPersonalizadas()]}
+
 const PATRONES=['Carrizo','Troyer','Citrus macrophylla','Cleopatra','Forner-Alcaide nº 5','Forner-Alcaide nº 13','Forner-Alcaide nº 517','C-35','Citrumelo Swingle','Poncirus trifoliata','Volkameriana','Naranjo amargo'];
 const PROVINCIAS=[['01','Álava'],['02','Albacete'],['03','Alicante'],['04','Almería'],['05','Ávila'],['06','Badajoz'],['07','Illes Balears'],['08','Barcelona'],['09','Burgos'],['10','Cáceres'],['11','Cádiz'],['12','Castellón'],['13','Ciudad Real'],['14','Córdoba'],['15','A Coruña'],['16','Cuenca'],['17','Girona'],['18','Granada'],['19','Guadalajara'],['20','Gipuzkoa'],['21','Huelva'],['22','Huesca'],['23','Jaén'],['24','León'],['25','Lleida'],['26','La Rioja'],['27','Lugo'],['28','Madrid'],['29','Málaga'],['30','Murcia'],['31','Navarra'],['32','Ourense'],['33','Asturias'],['34','Palencia'],['35','Las Palmas'],['36','Pontevedra'],['37','Salamanca'],['38','Santa Cruz de Tenerife'],['39','Cantabria'],['40','Segovia'],['41','Sevilla'],['42','Soria'],['43','Tarragona'],['44','Teruel'],['45','Toledo'],['46','Valencia'],['47','Valladolid'],['48','Bizkaia'],['49','Zamora'],['50','Zaragoza'],['51','Ceuta'],['52','Melilla']];
 const ANDALUCIA=new Set(['04','11','14','18','21','23','29','41']);
@@ -326,42 +336,55 @@ function abrirMapa(o){
     const informarPos=()=>{if(!mk)return panel('<span class="mu">Toca el mapa o pulsa Reubicar GPS para seleccionar una posición.</span>');const ll=mk.getLatLng();panel(`<b>📍 Ubicación seleccionada</b><div class="map-coords">${ll.lat.toFixed(7)}, ${ll.lng.toFixed(7)}</div><div class="mu">Arrastra el marcador o toca el mapa para corregir la posición. Pulsa «Guardar ubicación» para conservar estas coordenadas sin cambiar la referencia SIGPAC.</div><div class="row"><button id="mconsultar">🗺️ Consultar SIGPAC aquí</button></div>`);$('#mconsultar').onclick=()=>consultarSigpac(ll)};
     $('#majustar').onclick=()=>{ajustando=!ajustando;$('#majustar').classList.toggle('active',ajustando);$('#majustar').textContent=ajustando?'✓ Ajustando':'✋ Ajustar marcador';if(mk)mk.dragging.enable();informarPos()};
     $('#mguardar').onclick=()=>{if(!mk)return toast('Primero selecciona una ubicación en el mapa.');const ll=mk.getLatLng();if(typeof o.onCoords!=='function')return toast('No se puede guardar en esta pantalla.');o.onCoords({lat:ll.lat,lng:ll.lng});cerrar()};
-    const varList=[...(o.variedades||[])];if(medVariedad&&!varList.includes(medVariedad))varList.unshift(medVariedad);const varOptions=varList.map(v=>`<option value="${esc(v)}" ${v===medVariedad?'selected':''}>${esc(v)}</option>`).join('');
-    const detenerDibujo=()=>{modoMedicion=null;ov.classList.remove('measure-active');map.dragging.enable();map.doubleClickZoom.enable();try{map.getContainer().releasePointerCapture?.(pointerActivo)}catch{}pointerActivo=false};
-    const pintarTrazo=()=>{if(trazo)map.removeLayer(trazo);if(vertices.length>=2)trazo=L.polyline(vertices,{color:'#ff7a00',weight:4,dashArray:'7 5'}).addTo(map);};
-    const refrescarConteo=()=>{const el=$('#mcount');if(el)el.textContent=vertices.length+' puntos'+(vertices.length>=3?' · '+areaPoligonoHa(vertices).toFixed(4)+' ha':'');};
-    const cancelarMedicion=()=>{detenerDibujo();if(trazo){map.removeLayer(trazo);trazo=null}vertices=[];panel('<b>Medición cancelada</b><div class="mu">Puedes volver a seleccionar un recinto SIGPAC y empezar otra medición.</div>')};
+    const varList=[...new Set([...todasLasVariedades(),...(o.variedades||[])])];if(medVariedad&&!varList.includes(medVariedad))varList.unshift(medVariedad);
+    const construirOpcionesVariedad=sel=>Object.entries(VARIEDADES).map(([grupo,items])=>`<optgroup label="${esc(grupo)}">${items.map(v=>`<option value="${esc(v)}" ${v===sel?'selected':''}>${esc(v)}</option>`).join('')}</optgroup>`).join('')+(variedadesPersonalizadas().length?`<optgroup label="Mis variedades" >${variedadesPersonalizadas().map(v=>`<option value="${esc(v)}" ${v===sel?'selected':''}>${esc(v)}</option>`).join('')}</optgroup>`:'')+(sel&&!todasLasVariedades().includes(sel)?`<option value="${esc(sel)}" selected>${esc(sel)}</option>`:'');
+    const detenerDibujo=()=>{modoMedicion=null;ov.classList.remove('measure-active');map.dragging.enable();map.doubleClickZoom.enable();try{if(pointerActivo!==false)map.getContainer().releasePointerCapture?.(pointerActivo)}catch{}pointerActivo=false};
+    let vertexMarkers=[],redoVertices=[],selectedVertex=-1,insertarPunto=false;
+    const limpiarMarcadores=()=>{vertexMarkers.forEach(m=>map.removeLayer(m));vertexMarkers=[]};
+    const iconoVertice=(i,sel=false)=>L.divIcon({className:'',html:`<div class="vertex-icon ${sel?'selected':''}">${i+1}</div>`,iconSize:[26,26],iconAnchor:[13,13]});
+    const refrescarConteo=()=>{const el=$('#mcount');if(el)el.textContent=vertices.length+' puntos'+(vertices.length>=3?' · '+areaPoligonoHa(vertices).toFixed(4)+' ha':'');const st=$('#mstatus');if(st)st.textContent=selectedVertex>=0?'Punto '+(selectedVertex+1)+' seleccionado · arrástralo para corregirlo.':(insertarPunto?'Toca cerca de un lado para insertar un punto intermedio.':'Toca para añadir un vértice; toca un punto numerado para seleccionarlo.')};
+    const pintarTrazo=()=>{
+      if(trazo){map.removeLayer(trazo);trazo=null}if(vertices.length>=2)trazo=L.polyline(vertices,{color:'#ff7a00',weight:4,dashArray:'7 5',bubblingMouseEvents:false}).addTo(map);
+      limpiarMarcadores();if(modoMedicion==='points')vertices.forEach((ll,i)=>{const m=L.marker(ll,{draggable:true,icon:iconoVertice(i,i===selectedVertex),keyboard:false,zIndexOffset:1000}).addTo(map);m.on('click',e=>{L.DomEvent.stopPropagation(e);if(i===0&&vertices.length>=3){finalizarMedicion();return}selectedVertex=i;pintarTrazo();refrescarConteo()});m.on('drag',()=>{vertices[i]=m.getLatLng();if(trazo){map.removeLayer(trazo);trazo=L.polyline(vertices,{color:'#ff7a00',weight:4,dashArray:'7 5'}).addTo(map)}refrescarConteo()});m.on('dragend',()=>{vertices[i]=m.getLatLng();refrescarConteo()});vertexMarkers.push(m)});
+      refrescarConteo();
+    };
+    const cancelarMedicion=()=>{detenerDibujo();if(trazo){map.removeLayer(trazo);trazo=null}limpiarMarcadores();vertices=[];redoVertices=[];panel('<b>Medición cancelada</b><div class="mu">Puedes volver a seleccionar un recinto SIGPAC y empezar otra medición.</div>')};
+    const actualizarBotonesDibujo=()=>{const u=$('#mundo'),r=$('#mredoP'),ins=$('#minsert');if(u)u.disabled=!vertices.length;if(r)r.disabled=!redoVertices.length;if(ins){ins.classList.toggle('active',insertarPunto);ins.textContent=insertarPunto?'✓ Insertando punto':'＋ Insertar punto'}};
     const iniciarMedicion=(metodo)=>{
       if(!recintoMedir)return toast('Primero toca dentro del recinto SIGPAC que quieres medir.');
       medVariedad=$('#mvariedad')?.value||medVariedad||o.variedad||'';if(!medVariedad)return toast('Selecciona la variedad que vas a medir.');
-      modoMedicion=metodo;vertices=[];if(trazo){map.removeLayer(trazo);trazo=null}ov.classList.add('measure-active');map.dragging.disable();map.doubleClickZoom.disable();
-      panel(`<b>📐 Midiendo ${metodo==='free'?'dibujando a mano':'marcando puntos'} · ${esc(medVariedad)}</b><div class="measure-help">${metodo==='free'?'Mantén pulsado y arrastra el dedo o ratón por el perímetro de la variedad.':'Toca sucesivamente los vértices del perímetro. Cierra el contorno volviendo al primer punto o pulsa Finalizar.'} Evita cruzar el contorno y no incluyas caminos.</div><div class="measure-summary"><span id="mcount" class="measure-points">0 puntos</span></div><div class="measure-actions"><button class="s" id="mundo">↶ Deshacer punto</button><button id="mfinish">✓ Finalizar polígono</button><button class="s" id="mcancel">Cancelar</button></div>`);
-      $('#mundo').onclick=()=>{if(vertices.length){vertices.pop();pintarTrazo();refrescarConteo()}};
-      $('#mcancel').onclick=cancelarMedicion;
-      $('#mfinish').onclick=finalizarMedicion;
+      modoMedicion=metodo;vertices=[];redoVertices=[];selectedVertex=-1;insertarPunto=false;if(trazo){map.removeLayer(trazo);trazo=null}limpiarMarcadores();ov.classList.add('measure-active');map.dragging.disable();map.doubleClickZoom.disable();
+      panel(`<b>📐 Midiendo ${metodo==='free'?'a mano alzada':'por puntos'} · ${esc(medVariedad)}</b><div class="measure-help">${metodo==='free'?'Mantén pulsado y arrastra el dedo por el perímetro.':'Toca para añadir puntos. Arrastra los puntos numerados para corregir el contorno. Toca el primer punto para cerrar y calcular.'} Puedes ampliar el mapa con dos dedos.</div><div class="measure-summary"><span id="mcount" class="measure-points">0 puntos</span><div id="mstatus" class="measure-status">Toca para añadir un vértice.</div></div><div class="measure-toolbar"><button class="s" id="mundo">↶ Deshacer</button><button class="s" id="mredoP">↷ Rehacer</button><button class="s" id="minsert">＋ Insertar punto</button><button class="s" id="mdelvertex">✕ Borrar punto</button><button id="mfinish">✓ Cerrar y calcular</button><button class="s" id="mcancel">Cancelar</button></div>`);
+      $('#mundo').onclick=()=>{if(vertices.length){redoVertices.push(vertices.pop());selectedVertex=-1;pintarTrazo();actualizarBotonesDibujo()}};
+      $('#mredoP').onclick=()=>{if(redoVertices.length){vertices.push(redoVertices.pop());pintarTrazo();actualizarBotonesDibujo()}};
+      $('#minsert').onclick=()=>{insertarPunto=!insertarPunto;selectedVertex=-1;refrescarConteo();actualizarBotonesDibujo()};
+      $('#mdelvertex').onclick=()=>{if(selectedVertex<0)return toast('Primero toca un punto numerado para seleccionarlo.');vertices.splice(selectedVertex,1);selectedVertex=-1;pintarTrazo();actualizarBotonesDibujo()};
+      $('#mcancel').onclick=cancelarMedicion;$('#mfinish').onclick=finalizarMedicion;actualizarBotonesDibujo();
     };
     const finalizarMedicion=()=>{
       if(vertices.length<3)return toast('Necesitas al menos tres puntos para cerrar una superficie.');
-      detenerDibujo();if(trazo){map.removeLayer(trazo);trazo=null}
+      detenerDibujo();limpiarMarcadores();if(trazo){map.removeLayer(trazo);trazo=null}
       const ha=areaPoligonoHa(vertices),oficial=num(recintoMedir.superficie),relacionadas=fincas.filter(x=>String(x.finca||'').trim().toLocaleLowerCase('es')===String(o.fincaNombre||'').trim().toLocaleLowerCase('es')&&String(x.propietarios||'').trim().toLocaleLowerCase('es')===String(o.propietario||'').trim().toLocaleLowerCase('es')),anteriores=relacionadas.flatMap(x=>parcelasDe(x).filter(p=>sigClave(p)===sigClave(recintoMedir)).flatMap(p=>Array.isArray(p.mediciones)?p.mediciones:[])).reduce((a,m)=>a+(num(m.superficie_ha)||0),0);
-      const pendiente=oficial==null?null:oficial-anteriores-ha;
-      const aviso=pendiente==null?'No consta la superficie oficial de este recinto.':pendiente>=0?`Quedan ${pendiente.toFixed(4)} ha pendientes de asignar.`:`Las mediciones superan la superficie oficial en ${Math.abs(pendiente).toFixed(4)} ha.`;
+      const pendiente=oficial==null?null:oficial-anteriores-ha;const aviso=pendiente==null?'No consta la superficie oficial de este recinto.':pendiente>=0?`Quedan ${pendiente.toFixed(4)} ha pendientes de asignar.`:`Las mediciones superan la superficie oficial en ${Math.abs(pendiente).toFixed(4)} ha.`;
       const pol=L.polygon(vertices,{color:'#f97316',weight:3,fillColor:'#f97316',fillOpacity:.28}).addTo(map);trazo=pol;
-      panel(`<b>Resultado de la medición</b><div class="measure-summary"><div>Variedad: <strong>${esc(medVariedad)}</strong></div><div>Superficie SIGPAC del recinto: <strong>${oficial==null?'No disponible':oficial.toFixed(4)+' ha'}</strong></div><div>Superficie de esta variedad: <strong>${ha.toFixed(4)} ha</strong></div><div>Mediciones anteriores en este recinto: <strong>${anteriores.toFixed(4)} ha</strong></div><div class="mu" style="margin-top:6px">${esc(aviso)}</div></div><div class="measure-help">La superficie se calcula a partir del polígono dibujado. Comprueba que el contorno no se solape con otra variedad antes de guardar.</div><div class="measure-actions"><button id="msave">💾 Guardar medición</button><button class="s" id="mredo">Volver a dibujar</button></div>`);
+      panel(`<b>Resultado de la medición</b><div class="measure-summary"><div>Variedad: <strong>${esc(medVariedad)}</strong></div><div>Superficie SIGPAC del recinto: <strong>${oficial==null?'No disponible':oficial.toFixed(4)+' ha'}</strong></div><div>Superficie de esta variedad: <strong>${ha.toFixed(4)} ha</strong></div><div>Mediciones anteriores en este recinto: <strong>${anteriores.toFixed(4)} ha</strong></div><div class="mu" style="margin-top:6px">${esc(aviso)}</div></div><div class="measure-help">La superficie se calcula a partir del polígono dibujado. La fotografía aérea no identifica de forma fiable por sí sola las lindes entre variedades; revisa el contorno antes de guardar.</div><div class="measure-actions"><button id="msave">💾 Guardar medición</button><button class="s" id="mredo">Volver a dibujar</button></div>`);
       $('#msave').onclick=()=>{if(typeof o.onMeasure!=='function')return toast('No se ha configurado el guardado de mediciones.');const ok=o.onMeasure({parcela:recintoMedir,variedad:medVariedad,superficie_ha:+ha.toFixed(4),geometria:vertices.map(x=>({lat:+x.lat.toFixed(7),lng:+x.lng.toFixed(7)})),metodo:medMetodo});if(ok!==false){toast('Medición de '+medVariedad+' guardada: '+ha.toFixed(4)+' ha.');panel('<b>Medición guardada</b><div class="mu">Ya puedes medir otra variedad o recinto. El plano conserva el contorno dibujado.</div>')}};
       $('#mredo').onclick=()=>iniciarMedicion(medMetodo);
     };
     let medMetodo='points';
     $('#mmedicion').onclick=()=>{
       if(!recintoMedir)return panel('<b>Primero selecciona el recinto</b><div class="mu">Toca dentro del recinto SIGPAC que contiene la variedad. Cuando aparezcan sus datos, podrás medirlo.</div>');
-      panel(`<b>📐 Medir superficie de una variedad</b><label style="display:block;margin-top:8px">Variedad</label><select id="mvariedad">${varOptions}</select><div class="measure-help">La medición quedará guardada dentro del recinto SIGPAC seleccionado, separada de su superficie oficial.</div><div class="measure-actions"><button id="mmetodoP">📍 Marcar puntos</button><button id="mmetodoF">✍️ Dibujar a mano</button></div>`);
-      $('#mmetodoP').onclick=()=>{medMetodo='points';iniciarMedicion('points')};$('#mmetodoF').onclick=()=>{medMetodo='free';iniciarMedicion('free')};
+      panel(`<b>📐 Medir superficie de una variedad</b><label style="display:block;margin-top:8px">Variedad</label><select id="mvariedad">${construirOpcionesVariedad(medVariedad)}</select><div class="row" style="margin-top:7px"><input id="mvarNueva" placeholder="Añadir variedad nueva…" aria-label="Nueva variedad"><button class="s" id="mvarGuardar" style="flex:0 0 auto">＋ Guardar</button></div><div class="measure-help">El listado incluye naranjas, mandarinas y otros cítricos. Puedes añadir nombres propios; se guardan en este dispositivo para futuras mediciones. La medición queda separada por variedad.</div><div class="measure-toolbar"><button id="mmetodoP">📍 Dibujar por puntos</button><button id="mmetodoF">✍️ A mano alzada</button><button class="s" id="mvarLimpiar">Limpiar selección</button></div>`);
+      $('#mvarGuardar').onclick=()=>{const v=$('#mvarNueva').value.trim();if(!v)return toast('Escribe el nombre de la variedad.');if(!guardarVariedadPersonalizada(v)&&!todasLasVariedades().some(x=>normaliza(x)===normaliza(v)))return toast('No se pudo guardar la variedad.');const sel=$('#mvariedad');sel.innerHTML=construirOpcionesVariedad(v);sel.value=v;$('#mvarNueva').value='';toast('Variedad disponible en futuras mediciones de este dispositivo.')};
+      $('#mvarLimpiar').onclick=()=>{$('#mvariedad').value='';medVariedad=''};
+      $('#mmetodoP').onclick=()=>{medVariedad=$('#mvariedad').value;medMetodo='points';iniciarMedicion('points')};$('#mmetodoF').onclick=()=>{medVariedad=$('#mvariedad').value;medMetodo='free';iniciarMedicion('free')};
     };
-    const addVertex=ll=>{vertices.push(L.latLng(ll.lat,ll.lng));pintarTrazo();refrescarConteo()};
+    const addVertex=ll=>{vertices.push(L.latLng(ll.lat,ll.lng));selectedVertex=-1;redoVertices=[];pintarTrazo();actualizarBotonesDibujo()};
+    const nearestSegmentIndex=ll=>{const p=map.latLngToContainerPoint(ll);let best=0,dist=Infinity;for(let i=0;i<vertices.length-1;i++){const a=map.latLngToContainerPoint(vertices[i]),b=map.latLngToContainerPoint(vertices[i+1]),dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1))),d=Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));if(d<dist){dist=d;best=i+1}}return best};
     const mapEl=map.getContainer();
     mapEl.addEventListener('pointerdown',ev=>{if(modoMedicion!=='free'||ev.target.closest('.leaflet-control'))return;ev.preventDefault();pointerActivo=ev.pointerId;try{mapEl.setPointerCapture(ev.pointerId)}catch{}const r=mapEl.getBoundingClientRect();pixelPrev={x:ev.clientX-r.left,y:ev.clientY-r.top};addVertex(map.containerPointToLatLng(L.point(pixelPrev.x,pixelPrev.y)));});
-    mapEl.addEventListener('pointermove',ev=>{if(modoMedicion!=='free'||!pointerActivo||ev.pointerId!==pointerActivo)return;const r=mapEl.getBoundingClientRect(),px={x:ev.clientX-r.left,y:ev.clientY-r.top};if(!pixelPrev||medirDistanciaPx(px,pixelPrev)<5)return;pixelPrev=px;addVertex(map.containerPointToLatLng(L.point(px.x,px.y)));});
-    const soltarTrazo=ev=>{if(modoMedicion!=='free'||!pointerActivo||ev.pointerId!==pointerActivo)return;pointerActivo=false;pixelPrev=null;try{mapEl.releasePointerCapture(ev.pointerId)}catch{}refrescarConteo()};
+    mapEl.addEventListener('pointermove',ev=>{if(modoMedicion!=='free'||pointerActivo===false||ev.pointerId!==pointerActivo)return;const r=mapEl.getBoundingClientRect(),px={x:ev.clientX-r.left,y:ev.clientY-r.top};if(!pixelPrev||medirDistanciaPx(px,pixelPrev)<5)return;pixelPrev=px;addVertex(map.containerPointToLatLng(L.point(px.x,px.y)));});
+    const soltarTrazo=ev=>{if(modoMedicion!=='free'||pointerActivo===false||ev.pointerId!==pointerActivo)return;pointerActivo=false;pixelPrev=null;try{mapEl.releasePointerCapture(ev.pointerId)}catch{}refrescarConteo()};
     mapEl.addEventListener('pointerup',soltarTrazo);mapEl.addEventListener('pointercancel',soltarTrazo);
 
     if(o.lat!=null&&o.lng!=null){map.setView([o.lat,o.lng],18);asegurarMarcador([o.lat,o.lng]);ubicar(false)}else ubicar(true);
@@ -388,7 +411,7 @@ function abrirMapa(o){
         if(disponibles.length)$('#mok').onclick=()=>{if(typeof o.onPick==='function'){const ok=o.onPick(disponibles);if(ok!==false)cerrar()}};
       }catch(err){if(id===n)panel('<b>No se pudo consultar SIGPAC</b><div class="mu">Comprueba la conexión e inténtalo de nuevo ('+esc(err.message||err)+').</div>')}
     };
-    map.on('click',e=>{if(modoMedicion==='points'){addVertex(e.latlng);return}if(modoMedicion==='free')return;asegurarMarcador(e.latlng);if(ajustando)informarPos();else consultarSigpac(e.latlng)});
+    map.on('click',e=>{if(modoMedicion==='points'){if(insertarPunto&&vertices.length>=2){const at=nearestSegmentIndex(e.latlng);vertices.splice(at,0,L.latLng(e.latlng.lat,e.latlng.lng));selectedVertex=at;insertarPunto=false;pintarTrazo();actualizarBotonesDibujo()}else addVertex(e.latlng);return}if(modoMedicion==='free')return;asegurarMarcador(e.latlng);if(ajustando)informarPos();else consultarSigpac(e.latlng)});
     map.on('layeradd',()=>{});
     // Arrastrar no modifica SIGPAC hasta que el usuario solicite una consulta.
     const prepararArrastre=()=>{if(mk&&!mk._fincasDragBound){mk.on('dragend',informarPos);mk._fincasDragBound=true}};
@@ -572,7 +595,7 @@ function render(){
   if(view==='login')return login(app);if(view==='list')return list(app);if(view==='detail')return detail(app);if(view==='mad')return mad(app);if(view==='madform')return madform(app);form(app);
 }
 function login(app){
-  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.37</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
+  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.38</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
   const go=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
   $('#go').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};
 }

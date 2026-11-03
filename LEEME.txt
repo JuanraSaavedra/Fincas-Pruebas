@@ -1,48 +1,43 @@
-FINCAS 2.37 — Corrección de importación Excel y medición SIGPAC
+FINCAS 2.38 — Selector de cítricos y dibujo por puntos mejorado
 
-Novedades de esta versión:
-- Medición de superficies de variedades mediante dibujo libre con dedo/ratón o marcando puntos sucesivos.
-- Cada medición se guarda como subpolígono dentro del recinto SIGPAC, identificada por variedad, superficie y método.
-- Compara el área medida con la superficie oficial del recinto e informa de hectáreas pendientes o exceso.
-- El resumen de la ficha agrupa los recintos registrados por parcela SIGPAC y muestra superficies medidas por variedad. La suma oficial puede estar incompleta si faltan recintos por registrar.
-- Las geometrías de las mediciones vuelven a mostrarse al consultar ese recinto en el mapa.
+NOVEDADES
+- Selector de variedades organizado en Naranjas, Mandarinas y Otros cítricos.
+- Se pueden añadir variedades personalizadas desde el propio selector. Se guardan en el almacenamiento local del dispositivo y aparecen en las siguientes mediciones de ese dispositivo.
+- Dibujo por puntos mejorado: cada vértice aparece numerado y se puede arrastrar para corregir el contorno.
+- Tocar el primer punto cierra el polígono y calcula la superficie.
+- Deshacer y rehacer puntos, borrar un punto seleccionado e insertar puntos intermedios en un lado del polígono.
+- Cálculo de hectáreas en directo mientras se dibuja.
+- Se mantiene el dibujo a mano alzada como método alternativo.
+- Se actualiza la caché de la PWA para forzar la descarga de la versión 2.38.
 
-Novedades heredadas:
-- El botón SIGPAC de la ficha de una finca abre el mapa integrado de Fincas, no el visor desde la vista general de España.
-- Si la finca tiene coordenadas generales, el mapa se centra en ellas con zoom de detalle (nivel 18). Si no las tiene, utiliza la primera parcela con coordenadas guardadas.
-- Si tampoco hay coordenadas de parcelas, se abre el mapa para buscar el municipio o utilizar el GPS y guardar primero la ubicación general.
-- Desde el mapa centrado puedes tocar el interior de cada recinto para consultar su referencia SIGPAC. Los recintos cítricos CI detectados se pueden añadir directamente a la ficha de esa finca.
-- Los recintos nuevos se agregan a los existentes, sin sustituirlos. Se comprueban duplicados por provincia, municipio, polígono, parcela y recinto.
-- Al guardar una ubicación general desde este mapa, se mantiene la propagación a otras variedades que tengan exactamente el mismo nombre de finca y propietario. No se copian referencias SIGPAC.
-- Los enlaces SIGPAC individuales que aparecen junto a parcelas ya identificadas se mantienen para consultar la referencia concreta en el visor oficial.
+USO DEL DIBUJO POR PUNTOS EN IPHONE
+1. Abre la finca y entra en SIGPAC.
+2. Toca dentro del recinto que quieres medir.
+3. Pulsa Medir variedad y elige una variedad o añade una nueva.
+4. Pulsa Dibujar por puntos.
+5. Amplía con dos dedos y toca los vértices del contorno.
+6. Si necesitas corregir un vértice, arrástralo. Para insertar uno entre dos puntos, pulsa «Insertar punto» y toca cerca del lado correspondiente.
+7. Puedes seleccionar un punto y borrarlo, o usar Deshacer/Rehacer.
+8. Toca el primer punto numerado o pulsa «Cerrar y calcular». Comprueba la superficie y guarda.
 
-Instalación:
-1. Descarga una copia de seguridad desde Fincas.
-2. Sustituye los archivos del repositorio por los incluidos en este ZIP.
+LIMITACIÓN IMPORTANTE SOBRE LA DETECCIÓN AUTOMÁTICA
+Esta versión mejora el dibujo y la edición manual, pero NO incorpora reconocimiento automático por inteligencia artificial de los límites interiores entre variedades a partir de la fotografía aérea. SIGPAC ofrece límites oficiales de recintos, no las lindes internas de cada variedad. Las imágenes aéreas pueden no mostrar claramente dónde cambia una variedad, por lo que no sería fiable prometer una delimitación automática sin un sistema específico de visión artificial y validación humana. El usuario debe revisar y ajustar el perímetro.
+
+DATOS Y COMPATIBILIDAD
+- Las mediciones se siguen guardando en la columna JSONB parcelas, dentro del recinto SIGPAC, con variedad, superficie, geometría y método.
+- Las variedades personalizadas se guardan en el almacenamiento local del navegador/dispositivo; no se sincronizan automáticamente entre dispositivos ni cuentas.
+- No se requiere migración de Supabase.
+- No se han modificado los datos ya guardados ni las mediciones existentes.
+
+INSTALACIÓN
+1. Haz una copia de seguridad desde Fincas.
+2. Sustituye los archivos del repositorio por los del ZIP (están en la raíz del ZIP).
 3. Publica los cambios en GitHub Pages.
-4. Cierra y vuelve a abrir la aplicación. Si aparece la versión anterior, recarga para actualizar la caché.
+4. Cierra y vuelve a abrir Fincas. Si aparece una versión anterior, recarga la página o elimina la PWA instalada y vuelve a abrirla.
 
-Importante:
-- No se ha publicado en GitHub Pages ni se ha probado contra la cuenta real de Supabase.
-- Para sincronizar recintos, la tabla fincas debe tener la columna JSONB parcelas utilizada por las versiones anteriores.
-- La consulta por coordenada de SIGPAC puede devolver solo parte de los recintos de una parcela; comprueba que has identificado todos antes de darla por completa.
+COMPROBACIONES
+- El código JavaScript debe superar la comprobación de sintaxis.
+- ZIP con 7 archivos en la raíz.
+- La medición sigue siendo cartográfica orientativa, no topográfica ni certificada.
 
-Versión 2.36 — Base de trabajo: Fincas 2.35.
-
-
-Novedades Fincas 2.36 — Medición de superficies por variedad
-- Desde la pestaña SIGPAC de una finca, toca un recinto para consultar sus datos y pulsa «Medir variedad».
-- Dos métodos: marcar puntos sucesivos o dibujar a mano arrastrando el dedo/ratón por el perímetro.
-- Se calcula la superficie dibujada en hectáreas y se guarda como medición independiente dentro del recinto SIGPAC, con variedad, geometría y método.
-- Se conserva la superficie oficial del recinto SIGPAC; no se reemplaza por la superficie dibujada.
-- Se informa de la superficie pendiente de asignar o del exceso cuando las mediciones acumuladas no coinciden con la superficie oficial del recinto.
-- Las mediciones se guardan en la columna JSONB parcelas de la tabla fincas, dentro de cada recinto y en el array mediciones.
-- La superficie se calcula geodésicamente sobre esfera; es una medición cartográfica orientativa, no un levantamiento topográfico ni una certificación oficial.
-- Si el servicio SIGPAC no devuelve superficie oficial para el recinto, se muestra como no disponible y no se calcula superficie pendiente.
-- Recomendación: no dibujar zonas solapadas entre variedades; la aplicación avisa de diferencias de superficie, pero no detecta automáticamente solapes entre polígonos.
-
-
-Novedades Fincas 2.37
-- Corregido el importador Excel: ya no envía el campo adicional "tipo" al insertar fincas en Supabase.
-- Si se produce un error al importar, el aviso muestra el primer mensaje devuelto por Supabase para facilitar el diagnóstico.
-- Se conserva la medición de superficies por variedad incorporada en 2.36.
+Base: Fincas 2.37 reparada.

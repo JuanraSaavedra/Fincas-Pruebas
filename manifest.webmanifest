@@ -1,5 +1,5 @@
 {
-  "name": "Fincas 2.37 · Gestión de cítricos",
+  "name": "Fincas 2.38 · Gestión de cítricos",
   "short_name": "Fincas",
   "start_url": "./",
   "display": "standalone",
@@ -18,5 +18,5 @@
       "purpose": "any maskable"
     }
   ],
-  "description": "Gestión de fincas y parcelas de cítricos"
+  "description": "Gestión de fincas, parcelas y medición de variedades de cítricos"
 }
