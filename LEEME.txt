@@ -1,4 +1,4 @@
-FINCAS 2.36 — Medición de superficies por variedad dentro de recintos SIGPAC
+FINCAS 2.37 — Corrección de importación Excel y medición SIGPAC
 
 Novedades de esta versión:
 - Medición de superficies de variedades mediante dibujo libre con dedo/ratón o marcando puntos sucesivos.
@@ -40,3 +40,9 @@ Novedades Fincas 2.36 — Medición de superficies por variedad
 - La superficie se calcula geodésicamente sobre esfera; es una medición cartográfica orientativa, no un levantamiento topográfico ni una certificación oficial.
 - Si el servicio SIGPAC no devuelve superficie oficial para el recinto, se muestra como no disponible y no se calcula superficie pendiente.
 - Recomendación: no dibujar zonas solapadas entre variedades; la aplicación avisa de diferencias de superficie, pero no detecta automáticamente solapes entre polígonos.
+
+
+Novedades Fincas 2.37
+- Corregido el importador Excel: ya no envía el campo adicional "tipo" al insertar fincas en Supabase.
+- Si se produce un error al importar, el aviso muestra el primer mensaje devuelto por Supabase para facilitar el diagnóstico.
+- Se conserva la medición de superficies por variedad incorporada en 2.36.

@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f7d32"><link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>Fincas 2.36 · Cítricos</title>
+<title>Fincas 2.37 · Cítricos</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{--bg:#f6f7f2;--card:#fff;--tx:#1d2a1a;--mu:#6b7a66;--ac:#e8820c;--ac2:#2f7d32;--bd:#dde2d6;--dn:#c0392b}
@@ -125,7 +125,7 @@ label{font-weight:750;font-size:14px}
 .search-main button{width:100%;min-height:46px;padding:9px 10px;white-space:nowrap;display:flex;align-items:center;justify-content:center}
 @media(max-width:430px){.search-main{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.search-main input{grid-column:1/-1}.search-main button{width:100%}}
 
-/* Fincas 2.36: medición de subparcelas por variedad */
+/* Fincas 2.37: corrección importación Excel */
 .measure-help{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:9px;margin:7px 0;font-size:13px}
 .measure-points{color:#155e43;font-weight:800}
 .measure-summary{border:1px solid var(--bd);border-radius:10px;padding:10px;margin:8px 0;background:var(--bg)}
@@ -136,7 +136,7 @@ label{font-weight:750;font-size:14px}
 #mapov.measure-active #mapa,#mapov.measure-active #mapa *{touch-action:none;cursor:crosshair}
 
 </style></head><body>
-<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.36</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
+<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.37</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
 <main id="app"></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -572,7 +572,7 @@ function render(){
   if(view==='login')return login(app);if(view==='list')return list(app);if(view==='detail')return detail(app);if(view==='mad')return mad(app);if(view==='madform')return madform(app);form(app);
 }
 function login(app){
-  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.36</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
+  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.37</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
   const go=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
   $('#go').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};
 }
@@ -634,14 +634,14 @@ async function importarExcelFincas(file){
   if(!confirm(summary))return;
   const session=(await sb.auth.getSession()).data.session;
   if(!session)return toast('La sesión ha caducado. Vuelve a iniciar sesión.');
-  let imported=0,errors=0,metadata=0;
+  let imported=0,errors=0,metadata=0,firstError="";
   for(const r of fresh){
     const prov=PROVINCIAS.find(p=>normaliza(p[1])===normaliza(r.provincia));
     const sup=num(r.superficie);
     const marcoMatch=r.marco.match(/(\d+(?:[.,]\d+)?)\s*[x×\/-]\s*(\d+(?:[.,]\d+)?)/i);
     const marcoA=marcoMatch?num(marcoMatch[1]):num(r.marco),marcoB=marcoMatch?num(marcoMatch[2]):null;
     const parcela={prov_cod:prov?.[0]||null,mun_cod:null,municipio:r.municipio||'',poligono:'',parcela:'',recinto:'',uso_sigpac:'',superficie:sup,lat:null,lng:null};
-    const row={finca:r.finca,propietarios:r.propietario,variedad:r.variedad,patron:r.patron||'',tipo:'Naranjas',superficie:sup,marco_a:marcoA,marco_b:marcoB,municipio:r.municipio||'',poligono:'',parcela:'',recinto:null,lat:null,lng:null,prov_cod:prov?.[0]||null,mun_cod:null,parcelas:[parcela]};
+    const row={finca:r.finca,propietarios:r.propietario,variedad:r.variedad,patron:r.patron||'',superficie:sup,marco_a:marcoA,marco_b:marcoB,municipio:r.municipio||'',poligono:'',parcela:'',recinto:null,lat:null,lng:null,prov_cod:prov?.[0]||null,mun_cod:null,parcelas:[parcela]};
     try{
       const id=crypto.randomUUID();
       const result=await sb.from('fincas').insert({...row,id});
@@ -652,11 +652,11 @@ async function importarExcelFincas(file){
         const a=await sb.from('anotaciones').insert({finca_id:id,texto:extra,fotos:[]});
         if(a.error){metadata++;console.warn('No se pudo guardar la anotación de origen',a.error)}
       }
-    }catch(e){errors++;console.error('Error importando finca',r.finca,e)}
+    }catch(e){errors++;if(!firstError)firstError=(e?.message||String(e)).slice(0,220);console.error('Error importando finca',r.finca,e)}
   }
   await load();
   view='list';render();
-  toast(`Importación terminada: ${imported} fincas · ${errors} errores${metadata?' · '+metadata+' notas de datos originales pendientes':''}.`);
+  toast(`Importación terminada: ${imported} fincas · ${errors} errores${metadata?' · '+metadata+' notas de datos originales pendientes':''}.${firstError?' Primer error: '+firstError:''}`);
 }
 function list(app){
   const rows=filtered(),tot=rows.reduce((s,f)=>s+(+f.superficie||0),0),ta=rows.reduce((s,f)=>s+arb(f),0);
