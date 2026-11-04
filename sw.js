@@ -1,7 +1,34 @@
-const C='fincas-v2-38-20261103';
-const A=['./','index.html','config.js','manifest.webmanifest','icon-192.png','icon-512.png'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(A)));self.skipWaiting()});
-self.addEventListener('activate',e=>e.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==C).map(k=>caches.delete(k)))),self.clients.claim()])));
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);
- if(u.origin!==location.origin&&!['cdn.jsdelivr.net','cdnjs.cloudflare.com'].includes(u.hostname))return;
- e.respondWith(caches.open(C).then(async cache=>{try{const response=await fetch(e.request);if(response.ok||response.type==='opaque')cache.put(e.request,response.clone());return response}catch{return (await cache.match(e.request))||Response.error()}}))});
+const V = 'fincas-v5';
+const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icono3-180.png', 'icono3-192.png', 'icono3-512.png', 'icono3-maskable-512.png'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys()
+      .then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+  const same = new URL(e.request.url).origin === self.location.origin;
+  if (same) {
+    // Archivos de la app: primero red (para recibir actualizaciones), si no hay red, copia guardada
+    e.respondWith(
+      fetch(e.request)
+        .then(r => { const cp = r.clone(); caches.open(V).then(c => c.put(e.request, cp)); return r; })
+        .catch(() => caches.match(e.request).then(m => m || caches.match('index.html')))
+    );
+  } else {
+    // Librería de Excel y tipografías: se guardan la primera vez y luego funcionan sin conexión
+    e.respondWith(
+      caches.match(e.request).then(m => m || fetch(e.request).then(r => {
+        const cp = r.clone(); caches.open(V).then(c => c.put(e.request, cp)); return r;
+      }))
+    );
+  }
+});
