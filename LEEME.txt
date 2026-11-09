@@ -1,43 +1,49 @@
-FINCAS 2.38 — Selector de cítricos y dibujo por puntos mejorado
+FINCAS 2.39 — SIGPAC único, zonas de variedades editables y borrado seguro
 
-NOVEDADES
-- Selector de variedades organizado en Naranjas, Mandarinas y Otros cítricos.
-- Se pueden añadir variedades personalizadas desde el propio selector. Se guardan en el almacenamiento local del dispositivo y aparecen en las siguientes mediciones de ese dispositivo.
-- Dibujo por puntos mejorado: cada vértice aparece numerado y se puede arrastrar para corregir el contorno.
-- Tocar el primer punto cierra el polígono y calcula la superficie.
-- Deshacer y rehacer puntos, borrar un punto seleccionado e insertar puntos intermedios en un lado del polígono.
-- Cálculo de hectáreas en directo mientras se dibuja.
-- Se mantiene el dibujo a mano alzada como método alternativo.
-- Se actualiza la caché de la PWA para forzar la descarga de la versión 2.38.
+CAMBIOS PRINCIPALES
+- Selector de variedades de cítricos reconstruido con opción inicial visible: Naranjas, Mandarinas, Otros cítricos y variedades personalizadas.
+- Las variedades personalizadas siguen guardándose en el dispositivo.
+- Dibujo por puntos y a mano alzada; vértices numerados, arrastrables, inserción y borrado de puntos, deshacer/rehacer y cálculo de hectáreas.
+- Los polígonos guardados se pueden tocar en el mapa para editar su contorno o eliminar únicamente esa zona de variedad.
+- Cada variedad conserva su geometría, superficie e identificador. Al editar se actualiza la medición existente, no se crea otra.
+- Aviso si una zona dibujada se solapa con otro polígono guardado en el mismo recinto.
+- Los colores de los polígonos se mantienen asociados a la variedad.
+- Reconsultar o volver a añadir un recinto SIGPAC ya registrado no duplica la referencia ni borra las mediciones existentes.
+- Referencias SIGPAC y mediciones de las fichas que comparten exactamente finca y propietario se consolidan en un único registro canónico. Se conserva una sola superficie oficial por recinto; las zonas de variedades quedan dentro de la lista de mediciones de ese recinto.
+- En la ficha aparece «Quitar referencia SIGPAC». La confirmación advierte que también se borrarán las mediciones vinculadas a ese recinto; la ubicación general de la finca no se altera.
+- Se eliminan los filtros desplegables independientes. El buscador general encuentra texto en cualquier campo, incluidos propietario, finca, variedad, patrón, hectáreas, municipio, datos SIGPAC, anotaciones y mediciones.
+- El listado permite seleccionar una o varias fincas, seleccionar todas las visibles y eliminarlas sin abrir cada ficha. Se muestran dos confirmaciones separadas y se borran únicamente los IDs seleccionados.
+- Se conserva sin cambios la rutina de importación Excel que quedó reparada en la versión 2.37/2.38.
+- Se actualiza la caché PWA a fincas-v2-39-20261108.
 
-USO DEL DIBUJO POR PUNTOS EN IPHONE
-1. Abre la finca y entra en SIGPAC.
-2. Toca dentro del recinto que quieres medir.
-3. Pulsa Medir variedad y elige una variedad o añade una nueva.
-4. Pulsa Dibujar por puntos.
-5. Amplía con dos dedos y toca los vértices del contorno.
-6. Si necesitas corregir un vértice, arrástralo. Para insertar uno entre dos puntos, pulsa «Insertar punto» y toca cerca del lado correspondiente.
-7. Puedes seleccionar un punto y borrarlo, o usar Deshacer/Rehacer.
-8. Toca el primer punto numerado o pulsa «Cerrar y calcular». Comprueba la superficie y guarda.
+CASO DE UNA FINCA CON UN RECINTO DE 118 ha
+La referencia SIGPAC se almacena una sola vez con su superficie oficial (por ejemplo, 118 ha). Dentro de esa referencia se pueden guardar varias mediciones independientes, una por zona/variedad, cada una con su propio polígono y hectáreas. El resumen muestra la superficie oficial, la suma de las zonas medidas y la superficie pendiente o el exceso. No se asignan 118 ha a cada variedad.
 
-LIMITACIÓN IMPORTANTE SOBRE LA DETECCIÓN AUTOMÁTICA
-Esta versión mejora el dibujo y la edición manual, pero NO incorpora reconocimiento automático por inteligencia artificial de los límites interiores entre variedades a partir de la fotografía aérea. SIGPAC ofrece límites oficiales de recintos, no las lindes internas de cada variedad. Las imágenes aéreas pueden no mostrar claramente dónde cambia una variedad, por lo que no sería fiable prometer una delimitación automática sin un sistema específico de visión artificial y validación humana. El usuario debe revisar y ajustar el perímetro.
+USO DEL MAPA Y EDICIÓN
+1. Abre la ficha de la finca y entra en SIGPAC.
+2. Toca dentro del recinto y espera a que se consulte su referencia.
+3. Pulsa «Medir variedad», selecciona una variedad y elige «Dibujar por puntos» o «A mano alzada».
+4. En el modo por puntos, toca los vértices; arrastra un punto para corregirlo, usa Insertar punto, Borrar punto, Deshacer o Rehacer y pulsa «Cerrar y calcular».
+5. Comprueba la superficie y el aviso de solapamiento antes de guardar.
+6. Para modificar una zona guardada, vuelve a consultar el recinto, toca el polígono de la variedad y pulsa «Editar polígono». Guarda para actualizar la medición existente.
+7. Para quitar una zona, toca su polígono y pulsa «Eliminar zona». Esto no elimina la referencia SIGPAC oficial.
+8. Para retirar una referencia heredada, usa «Quitar referencia SIGPAC» en la ficha. La aplicación solicita confirmación y avisa de las mediciones que se eliminarán con ella.
 
-DATOS Y COMPATIBILIDAD
-- Las mediciones se siguen guardando en la columna JSONB parcelas, dentro del recinto SIGPAC, con variedad, superficie, geometría y método.
-- Las variedades personalizadas se guardan en el almacenamiento local del navegador/dispositivo; no se sincronizan automáticamente entre dispositivos ni cuentas.
-- No se requiere migración de Supabase.
-- No se han modificado los datos ya guardados ni las mediciones existentes.
+BUSCADOR Y BORRADO DESDE EL LISTADO
+- Escribe uno o varios términos en el buscador y pulsa Buscar o Intro. Se buscan coincidencias en cualquier campo del registro.
+- Marca las casillas de las fincas que quieras eliminar, o «Seleccionar las visibles».
+- Pulsa «Eliminar seleccionadas» y lee las dos confirmaciones. Solo se borran los registros marcados; compartir propietario o referencia SIGPAC no selecciona otras fincas.
 
-INSTALACIÓN
-1. Haz una copia de seguridad desde Fincas.
-2. Sustituye los archivos del repositorio por los del ZIP (están en la raíz del ZIP).
-3. Publica los cambios en GitHub Pages.
-4. Cierra y vuelve a abrir Fincas. Si aparece una versión anterior, recarga la página o elimina la PWA instalada y vuelve a abrirla.
+INSTALACIÓN / ACTUALIZACIÓN
+1. Antes de actualizar, descarga una copia de seguridad desde Fincas y guárdala en iCloud Drive o en el Mac.
+2. Descomprime Fincas-2.39.zip.
+3. Sustituye en el repositorio de GitHub Pages los archivos de la versión anterior por los incluidos en el ZIP, conservando el mismo nivel raíz.
+4. Mantén el archivo config.js con la configuración de Supabase de tu instalación. El ZIP incluye el config.js de la versión base; si tu repositorio tiene credenciales/configuración distintas, conserva tu copia actual.
+5. Publica los cambios y espera a que GitHub Pages termine el despliegue.
+6. En iPhone, cierra Fincas y vuelve a abrirla. La nueva clave de caché solicita los archivos 2.39; si siguiera apareciendo la versión anterior, cierra la PWA completamente y vuelve a abrirla con conexión.
 
-COMPROBACIONES
-- El código JavaScript debe superar la comprobación de sintaxis.
-- ZIP con 7 archivos en la raíz.
-- La medición sigue siendo cartográfica orientativa, no topográfica ni certificada.
-
-Base: Fincas 2.37 reparada.
+COMPROBACIONES Y LIMITACIONES
+- Se ha comprobado la sintaxis del JavaScript con Node.js y la integridad del ZIP.
+- Se han comprobado los siete archivos de distribución y sus nombres.
+- No se ha realizado una prueba conectando a una cuenta Supabase real ni una prueba táctil en un iPhone físico. Conviene hacer primero una copia de seguridad y probar una medición de ejemplo antes de trabajar con los datos reales.
+- SIGPAC proporciona límites oficiales de recintos, no las divisiones internas entre variedades. La imagen aérea sirve de referencia visual, pero esta versión no detecta automáticamente las lindes varietales: el usuario debe dibujar y revisar cada zona.
