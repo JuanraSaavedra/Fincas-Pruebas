@@ -162,7 +162,7 @@ label{font-weight:750;font-size:14px}
 .ok-line{color:var(--ac2);font-weight:700;font-size:14px}
 </style></head><body>
 <header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.39</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
-<main id="app"></main><div id="toast" class="toast"></div>
+<main id="app"><div class="card login-card"><h2>Iniciando Fincas 2.39…</h2><p class="mu">Cargando la aplicación. Si tarda, comprueba tu conexión a Internet.</p></div></main><div id="toast" class="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -171,7 +171,7 @@ label{font-weight:750;font-size:14px}
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}});
+const sb=(window.supabase&&window.supabase.createClient&&window.SUPABASE_URL&&window.SUPABASE_KEY)?window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}}):null;
 let mads=[],mf='',medit=null,fincas=[],view='login',cur=null,q='',qDraft='',orden='finca',draft=null,pend=[],urlCache={},selMode=false,sel=new Set();
 const fmt=iso=>iso?new Date(iso).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):'—';
 const num=v=>{v=String(v??'').replace(',','.').trim();return v===''||isNaN(v)?null:+v};
@@ -717,9 +717,18 @@ async function eliminarSeleccionadas(){
 }
 // ---------- sesión y datos ----------
 async function load(){const {data,error}=await sb.from('fincas').select('*, anotaciones(id,fecha,texto,fotos)').order('finca');if(error){fincas=getStored(CACHE_KEY);toast('Sin conexión con el servidor: mostrando copia local.');return}fincas=data||[];for(const item of pendingSync){const i=fincas.findIndex(f=>f.id===item.id);const row={...(i>=0?fincas[i]:{}),...item.row,id:item.id,_pending:true};if(i>=0)fincas[i]=row;else fincas.push(row)}setStored(CACHE_KEY,fincas)}
-(async()=>{const {data}=await sb.auth.getSession();if(data.session){await load();view='list'}render();status();if(data.session)syncPending();
+// Mostrar la interfaz inmediatamente: no esperar a que Supabase restaure la sesión.
+render();status();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(e=>console.warn('Service worker:',e));
+if(!sb){toast('No se ha podido cargar el servicio de conexión. Comprueba Internet y recarga la página.');}
+else {
   sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'){fincas=[];mads=[];sel.clear();selMode=false;localStorage.removeItem(CACHE_KEY);localStorage.removeItem(QUEUE_KEY);pendingSync=[];view='login';render()}});
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})})();
+  (async()=>{try{
+    const result=await Promise.race([sb.auth.getSession(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Tiempo de espera agotado al recuperar la sesión')),12000))]);
+    const data=result&&result.data;
+    if(data&&data.session){await load();view='list';render();syncPending();}
+  }catch(e){console.warn('No se pudo restaurar la sesión:',e);toast('No se ha podido recuperar la sesión. Puedes volver a iniciar sesión.');}})();
+}
 // ---------- fotos ----------
 async function signed(paths){const need=paths.filter(p=>!urlCache[p]);if(!need.length)return;const {data}=await sb.storage.from('fotos').createSignedUrls(need,3600);(data||[]).forEach(d=>{if(d.signedUrl)urlCache[d.path]=d.signedUrl})}
 function shrink(file,mx=1280,qd=.8){return createImageBitmap(file).then(bm=>{const k=Math.min(1,mx/Math.max(bm.width,bm.height)),c=document.createElement('canvas');c.width=Math.round(bm.width*k);c.height=Math.round(bm.height*k);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return new Promise(r=>c.toBlob(r,'image/jpeg',qd))})}
@@ -814,7 +823,7 @@ function render(){
 }
 function login(app){
   app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.39</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
-  const go=async()=>{const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
+  const go=async()=>{if(!sb)return toast('No se ha podido cargar el servicio de conexión. Comprueba Internet y recarga la página.');const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
   $('#go').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};
 }
 

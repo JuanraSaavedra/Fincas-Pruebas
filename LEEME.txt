@@ -34,3 +34,11 @@ LIMITACIONES
 - Las pruebas automáticas se hicieron en Chromium con simulaciones de Supabase, Leaflet y SheetJS (sin red). Conviene una prueba real en tu iPhone/iPad con tus datos tras la copia de seguridad.
 
 Base: Fincas 2.38 (sobre 2.37 reparada).
+
+
+ACTUALIZACIÓN 2.39.1 (20/11/2026)
+- Se muestra la pantalla de acceso inmediatamente, sin esperar a que Supabase restaure la sesión.
+- Si la sesión tarda más de 12 segundos o falla, la aplicación mantiene visible el acceso y muestra un aviso.
+- Si no carga la biblioteca de Supabase, se muestra un mensaje en lugar de dejar la pantalla en blanco.
+- Se actualizó la clave de caché del service worker para forzar la descarga de esta versión.
+- Esta reparación aborda el arranque en blanco observado en iPhone. No implica una prueba real de conexión con el proyecto Supabase.

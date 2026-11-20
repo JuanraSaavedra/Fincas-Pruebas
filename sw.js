@@ -1,4 +1,4 @@
-const C='fincas-v2-39-20261119';
+const C='fincas-v2-39-1-20261120';
 const A=['./','index.html','config.js','manifest.webmanifest','icon-192.png','icon-512.png'];
 // Librerías externas (mismas versiones que index.html): se precargan para que la app funcione sin conexión desde la primera instalación.
 const CDN=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js','https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css','https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'];
