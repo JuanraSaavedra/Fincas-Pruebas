@@ -3,8 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f7d32"><link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>Fincas 2.39 · Cítricos</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<title>Fincas 3.0 · Cítricos</title>
 <style>
 :root{--bg:#f6f7f2;--card:#fff;--tx:#1d2a1a;--mu:#6b7a66;--ac:#e8820c;--ac2:#2f7d32;--bd:#dde2d6;--dn:#c0392b}
 @media (prefers-color-scheme:dark){:root{--bg:#141a12;--card:#1e271b;--tx:#eef2ea;--mu:#9aa995;--bd:#34412f}}
@@ -140,7 +139,7 @@ label{font-weight:750;font-size:14px}
 .measure-status{font-size:12px;color:var(--mu);margin-top:6px}
 #mapov.measure-active #mapa,#mapov.measure-active #mapa *{touch-action:none;cursor:crosshair}
 
-/* Fincas 2.39: buscador universal, selección múltiple, polígonos por variedad */
+/* Fincas 3.0 (sin servidor) · base 2.39: buscador universal, selección múltiple, polígonos por variedad */
 .toast{z-index:80}
 .mpan{max-height:48vh;overflow:auto}
 .search-main{grid-template-columns:minmax(0,1fr) auto auto}
@@ -161,18 +160,111 @@ label{font-weight:750;font-size:14px}
 .warn{border-left:4px solid var(--dn);padding:6px 10px;margin:6px 0;background:var(--bg);border-radius:6px;font-size:13px}
 .ok-line{color:var(--ac2);font-weight:700;font-size:14px}
 </style></head><body>
-<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">2.39</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
-<main id="app"><div class="card login-card"><h2>Iniciando Fincas 2.39…</h2><p class="mu">Cargando la aplicación. Si tarda, comprueba tu conexión a Internet.</p></div></main><div id="toast" class="toast"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<header><h1>🍊 Fincas <small style="font-size:11px;opacity:.8">3.0</small></h1><span class="status" id="net">●</span><span id="hb"></span></header>
+<main id="app"></main><div id="toast" class="toast"></div>
 <script>
+// ---- Red de seguridad (3.0): si algo falla al arrancar, se muestra el motivo en pantalla en vez de quedarse en la portada ----
+function mostrarFallo(msg){try{
+  if(document.getElementById('fallo-arranque'))return;
+  const faltan=['L','XLSX','jspdf'].filter(n=>typeof window[n]==='undefined');
+  const d=document.createElement('div');d.id='fallo-arranque';
+  d.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:200;background:#fff;color:#111;border:3px solid #c00;border-radius:12px;padding:12px;font:14px/1.35 -apple-system,system-ui,sans-serif;max-height:70vh;overflow:auto;box-shadow:0 8px 30px #0006';
+  d.innerHTML='<b>⚠️ Fincas no ha podido arrancar correctamente</b><div style="margin:6px 0;word-break:break-word">'+String(msg).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+'</div>'+(faltan.length?'<div>No se han cargado estas librerías: <b>'+faltan.join(', ')+'</b>. Comprueba la conexión o desactiva los bloqueadores de contenido.</div>':'')+'<div style="margin-top:8px"><button id="fa-rec" style="padding:10px 14px;font-size:15px">🔄 Recargar limpio</button> <button id="fa-cer" style="padding:10px 14px;font-size:15px">Cerrar</button></div><div style="font-size:12px;margin-top:6px;color:#555">«Recargar limpio» borra solo la caché de la aplicación (no tus datos ni tu sesión). Versión 3.0.</div>';
+  document.body.appendChild(d);
+  document.getElementById('fa-cer').onclick=()=>d.remove();
+  document.getElementById('fa-rec').onclick=async()=>{try{const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}catch{}location.reload()};
+}catch{}}
+window.addEventListener('error',e=>mostrarFallo((e.message||'Error')+(e.lineno?' (línea '+e.lineno+')':'')));
+window.addEventListener('unhandledrejection',e=>{const a=document.getElementById('app');if(a&&!a.children.length)mostrarFallo('Error: '+((e.reason&&e.reason.message)||e.reason))});
+// Librerías opcionales (mapa, Excel, PDF): se cargan SIN bloquear el arranque y con fuentes alternativas. Sin red, la app funciona igual y solo esas funciones avisan.
+(function(){
+  const C='https://cdnjs.cloudflare.com/ajax/libs/',J='https://cdn.jsdelivr.net/npm/';
+  const script=urls=>urls.reduce((p,u)=>p.catch(()=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=u;s.async=true;s.onload=()=>res();s.onerror=()=>{s.remove();rej(new Error(u))};document.head.appendChild(s)})),Promise.reject()).catch(()=>console.warn('Biblioteca opcional no disponible (sin conexión o bloqueada):',urls[0]));
+  [C+'leaflet/1.9.4/leaflet.min.css',J+'leaflet@1.9.4/dist/leaflet.css'].reduce((p,u)=>p.catch(()=>new Promise((res,rej)=>{const l=document.createElement('link');l.rel='stylesheet';l.href=u;l.onload=()=>res();l.onerror=()=>{l.remove();rej()};document.head.appendChild(l)})),Promise.reject()).catch(()=>{});
+  script([C+'leaflet/1.9.4/leaflet.min.js',J+'leaflet@1.9.4/dist/leaflet.js']);
+  script([C+'jspdf/2.5.1/jspdf.umd.min.js',J+'jspdf@2.5.1/dist/jspdf.umd.min.js']);
+  script([C+'xlsx/0.18.5/xlsx.full.min.js',J+'xlsx@0.18.5/dist/xlsx.full.min.js']);
+})();
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const sb=(window.supabase&&window.supabase.createClient&&window.SUPABASE_URL&&window.SUPABASE_KEY)?window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}}):null;
-let mads=[],mf='',medit=null,fincas=[],view='login',cur=null,q='',qDraft='',orden='finca',draft=null,pend=[],urlCache={},selMode=false,sel=new Set();
+// ================= Almacén local (IndexedDB): Fincas 3.0 NO usa servidor =================
+// «sb» conserva la misma interfaz que usaba la app (from/select/insert/update/delete, storage, auth) pero todo ocurre en este dispositivo.
+if(!(window.crypto&&crypto.randomUUID)){try{crypto.randomUUID=()=>'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)})}catch{}}
+const LOCAL={ok:false,db:null,mem:{fincas:[],anotaciones:[],madurez:[]},fotosMem:new Map(),chain:Promise.resolve(),persisted:null,error:''};
+const IDB_NAME='fincas_v3',IDB_STORES=['fincas','anotaciones','madurez','fotos','meta'];
+function idbOpen(){const abrir=new Promise((res,rej)=>{if(!window.indexedDB)return rej(Error('Este navegador no permite guardar datos locales (IndexedDB).'));const r=indexedDB.open(IDB_NAME,1);r.onupgradeneeded=()=>{const d=r.result;for(const s of IDB_STORES)if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:(s==='fotos'||s==='meta')?'k':'id'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error||Error('No se pudo abrir el almacén local'));r.onblocked=()=>rej(Error('Almacén bloqueado por otra pestaña'))});return Promise.race([abrir,new Promise((_,rej)=>setTimeout(()=>rej(Error('Tiempo de espera agotado al abrir el almacén local')),6000))])}
+const idbReq=(store,mode,fn)=>new Promise((res,rej)=>{let req;const t=LOCAL.db.transaction(store,mode);t.oncomplete=()=>res(req?req.result:undefined);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error||Error('Transacción cancelada'));try{req=fn(t.objectStore(store))}catch(e){rej(e)}});
+const idbAll=s=>idbReq(s,'readonly',o=>o.getAll()),idbGet=(s,k)=>idbReq(s,'readonly',o=>o.get(k)),idbPut=(s,v)=>idbReq(s,'readwrite',o=>o.put(v)),idbDel=(s,k)=>idbReq(s,'readwrite',o=>o.delete(k)),idbClear=s=>idbReq(s,'readwrite',o=>o.clear()),idbCount=s=>idbReq(s,'readonly',o=>o.count());
+const clonar=o=>JSON.parse(JSON.stringify(o));
+function persistir(fn){LOCAL.chain=LOCAL.chain.then(()=>LOCAL.ok?fn():undefined).catch(e=>{LOCAL.error=String(e&&e.message||e);console.error('Almacén local',e);try{toast('⚠️ No se pudo guardar en este dispositivo: '+LOCAL.error)}catch{}});return LOCAL.chain}
+async function localInit(){
+  try{LOCAL.db=await idbOpen();LOCAL.ok=true;
+    const [f,a,m]=await Promise.all([idbAll('fincas'),idbAll('anotaciones'),idbAll('madurez')]);LOCAL.mem={fincas:f||[],anotaciones:a||[],madurez:m||[]};
+    try{const mt=await idbGet('meta','ultima_copia');if(mt&&mt.v&&!ultimaCopia())localStorage.setItem(ULTIMA_COPIA_KEY,mt.v)}catch{}
+  }catch(e){LOCAL.ok=false;LOCAL.error=String(e&&e.message||e);console.warn('IndexedDB no disponible',e)}
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().then(p=>{LOCAL.persisted=p}).catch(()=>{})}catch{}
+}
+// ---- fotografías (se guardan como binarios en el propio dispositivo) ----
+const blobToBuf=b=>b.arrayBuffer?b.arrayBuffer():new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsArrayBuffer(b)});
+async function fotoPut(path,blob){const buf=await blobToBuf(blob),rec={k:path,buf,type:blob.type||'image/jpeg'};if(LOCAL.ok){await LOCAL.chain;await idbPut('fotos',rec)}else LOCAL.fotosMem.set(path,rec)}
+async function fotoGet(path){return LOCAL.ok?await idbGet('fotos',path):LOCAL.fotosMem.get(path)}
+async function fotoDel(path){if(LOCAL.ok)await idbDel('fotos',path);LOCAL.fotosMem.delete(path);if(urlCache[path]){try{URL.revokeObjectURL(urlCache[path])}catch{}delete urlCache[path]}}
+async function fotoUrl(path){if(urlCache[path])return urlCache[path];const r=await fotoGet(path);if(!r)return null;const u=URL.createObjectURL(new Blob([r.buf],{type:r.type||'image/jpeg'}));urlCache[path]=u;return u}
+// ---- consultas con la misma sintaxis que usaba la app ----
+const cmpLocal=(x,y)=>x==null&&y==null?0:x==null?1:y==null?-1:(typeof x==='number'&&typeof y==='number')?x-y:String(x).localeCompare(String(y),'es');
+function localQuery(table){
+  const st={table,op:'select',cols:'*',filters:[],payload:null,ord:[],rng:null,single:false,ret:false};
+  const b={select(c){st.cols=c||'*';if(st.op!=='select')st.ret=true;return b},insert(p){st.op='insert';st.payload=p;return b},update(p){st.op='update';st.payload=p;return b},delete(){st.op='delete';return b},
+    eq(k,v){st.filters.push(r=>r[k]===v||(r[k]!=null&&v!=null&&String(r[k])===String(v)));return b},order(c,o){st.ord.push([c,!(o&&o.ascending===false)]);return b},range(a,z){st.rng=[a,z];return b},single(){st.single=true;return b},
+    then(ok,ko){return localRun(st).then(ok,ko)}};
+  return b}
+async function localRun(st){
+  try{
+    const tabla=st.table;if(!LOCAL.mem[tabla])return {data:null,error:{message:'Tabla desconocida: '+tabla}};
+    const T=LOCAL.mem[tabla],match=r=>st.filters.every(f=>f(r));
+    if(st.op==='select'){
+      let rows=T.filter(match).map(r=>clonar(r));
+      if(tabla==='fincas'&&/anotaciones\s*\(/.test(st.cols))rows=rows.map(r=>({...r,anotaciones:LOCAL.mem.anotaciones.filter(a=>a.finca_id===r.id).map(a=>({id:a.id,fecha:a.fecha,texto:a.texto,fotos:a.fotos||[]}))}));
+      else if(!/\*/.test(st.cols)){const ks=st.cols.split(',').map(s=>s.trim()).filter(Boolean);rows=rows.map(r=>Object.fromEntries(ks.filter(k=>k in r).map(k=>[k,r[k]])))}
+      for(const [c,asc] of [...st.ord].reverse())rows.sort((a,b)=>asc?cmpLocal(a[c],b[c]):-cmpLocal(a[c],b[c]));
+      if(st.rng)rows=rows.slice(st.rng[0],st.rng[1]+1);
+      if(st.single){if(!rows.length)return {data:null,error:{message:'Sin resultados'}};return {data:rows[0],error:null}}
+      return {data:rows,error:null}}
+    if(st.op==='insert'){
+      const arr=(Array.isArray(st.payload)?st.payload:[st.payload]).map(x=>clonar(x)),out=[];
+      for(const r of arr){
+        if(!r.id)r.id=crypto.randomUUID();
+        if(T.some(x=>x.id===r.id))return {data:null,error:{message:'Ya existe un registro con ese id'}};
+        if(tabla==='anotaciones'){if(!LOCAL.mem.fincas.some(f=>f.id===r.finca_id))return {data:null,error:{message:'La finca de la anotación no existe'}};r.fecha=r.fecha||new Date().toISOString();r.fotos=r.fotos||[]}
+        if(tabla==='madurez')r.creado=r.creado||new Date().toISOString();
+        if(tabla==='fincas')r.parcelas=r.parcelas||[];
+        T.push(r);out.push(r);const c=clonar(r);persistir(()=>idbPut(tabla,c))}
+      await LOCAL.chain;return {data:st.ret?(st.single?clonar(out[0]):out.map(x=>clonar(x))):null,error:null}}
+    if(st.op==='update'){
+      const rows=T.filter(match);
+      for(const r of rows){Object.assign(r,clonar(st.payload));const c=clonar(r);persistir(()=>idbPut(tabla,c))}
+      await LOCAL.chain;return {data:st.ret?(st.single?clonar(rows[0]||null):rows.map(x=>clonar(x))):null,error:null}}
+    if(st.op==='delete'){
+      const rows=T.filter(match),ids=new Set(rows.map(r=>r.id));LOCAL.mem[tabla]=T.filter(r=>!ids.has(r.id));
+      for(const r of rows){const id=r.id;persistir(()=>idbDel(tabla,id))}
+      if(tabla==='fincas'){ // cascada: anotaciones, fotos y pruebas de madurez de esa finca
+        const na=LOCAL.mem.anotaciones.filter(a=>ids.has(a.finca_id));LOCAL.mem.anotaciones=LOCAL.mem.anotaciones.filter(a=>!ids.has(a.finca_id));
+        for(const a of na){persistir(()=>idbDel('anotaciones',a.id));for(const p of (a.fotos||[]))persistir(()=>fotoDel(p))}
+        const nm=LOCAL.mem.madurez.filter(m=>ids.has(m.finca_id));LOCAL.mem.madurez=LOCAL.mem.madurez.filter(m=>!ids.has(m.finca_id));for(const m of nm)persistir(()=>idbDel('madurez',m.id))}
+      if(tabla==='anotaciones')for(const r of rows)for(const p of (r.fotos||[]))persistir(()=>fotoDel(p));
+      await LOCAL.chain;return {data:st.ret?rows.map(r=>({id:r.id})):null,error:null}}
+    return {data:null,error:{message:'Operación no soportada'}};
+  }catch(e){return {data:null,error:{message:String(e&&e.message||e)}}}
+}
+const sb={from:localQuery,
+  storage:{from:()=>({
+    async upload(path,blob){try{await fotoPut(path,blob);return {data:{path},error:null}}catch(e){return {data:null,error:{message:String(e&&e.message||e)}}}},
+    async createSignedUrls(paths){const data=[];for(const p of paths){const u=await fotoUrl(p);data.push({path:p,signedUrl:u,error:u?null:'No existe'})}return {data,error:null}},
+    async createSignedUrl(p){const u=await fotoUrl(p);return {data:u?{signedUrl:u}:null,error:u?null:{message:'No existe'}}},
+    async remove(paths){for(const p of paths)await fotoDel(p);return {data:paths,error:null}}})},
+  auth:{getSession:async()=>({data:{session:{user:{id:'local'}}}}),getUser:async()=>({data:{user:{id:'local'}}}),signOut:async()=>{},onAuthStateChange(){return {data:{subscription:{unsubscribe(){}}}}}}};
+
+let mads=[],mf='',medit=null,fincas=[],view='list',cur=null,q='',qDraft='',orden='finca',draft=null,pend=[],urlCache={},selMode=false,sel=new Set();
 const fmt=iso=>iso?new Date(iso).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'}):'—';
 const num=v=>{v=String(v??'').replace(',','.').trim();return v===''||isNaN(v)?null:+v};
 const arb=f=>{const a=+f.marco_a,b=+f.marco_b,s=+f.superficie;return a>0&&b>0&&s>0?Math.round(10000/(a*b)*s):0};
@@ -344,6 +436,7 @@ function compararSuperficie(oficial,total){
   if(-dif<=oficial*0.02)return {txt:'Supera la oficial en '+(-dif).toFixed(4)+' ha (dentro del 2 % de tolerancia cartográfica).',cls:'mu',dif};
   return {txt:'⚠️ Supera la superficie oficial en '+(-dif).toFixed(4)+' ha.',cls:'warn',dif}}
 function abrirMapa(o){
+  if(typeof L==='undefined')return toast('El mapa necesita cargar su biblioteca (requiere Internet la primera vez). Inténtalo de nuevo en unos segundos.');
   if(!window.L)return toast('No se pudo cargar el mapa. Comprueba la conexión a Internet.');
   const ov=document.createElement('div');ov.id='mapov';
   const elegir=o.modo==='elegir';
@@ -614,13 +707,21 @@ function abrirMapa(o){
     else{map.fitBounds(pts,{padding:[45,45],maxZoom:18});ubicar(false)}
   }
 }
-const CACHE_KEY='fincas2_cache_v1',QUEUE_KEY='fincas2_queue_v1';
+const CACHE_KEY='fincas2_cache_v1',QUEUE_KEY='fincas2_queue_v1'; // claves de la versión 2.x: solo se leen para recuperar datos antiguos de este dispositivo
 const getStored=k=>{try{return JSON.parse(localStorage.getItem(k)||'[]')}catch{return []}};
-const setStored=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch{toast('Almacenamiento local lleno: exporta una copia.');return false}};
-let pendingSync=getStored(QUEUE_KEY),syncing=false;
-function status(){const el=$('#net');if(el)el.textContent=(navigator.onLine?'● Conexión':'○ Sin red')+(pendingSync.length?' · '+pendingSync.length+' pendientes':'')}
-window.addEventListener('online',()=>{status();syncPending()});window.addEventListener('offline',status);
-function queueSave(f,row){const id=f.id||crypto.randomUUID(),item={kind:'finca',id,row,isNew:!f.id};pendingSync=pendingSync.filter(x=>x.id!==id);pendingSync.push(item);if(!setStored(QUEUE_KEY,pendingSync))return null;const existing=fincas.findIndex(x=>x.id===id);const updated={...f,...row,id,anotaciones:f.anotaciones||[],_pending:true};if(existing>=0)fincas[existing]=updated;else fincas.push(updated);setStored(CACHE_KEY,fincas);status();return id}
+const setStored=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch{return false}};
+let pendingSync=[],syncing=false; // en la 3.0 no hay cola de sincronización: todo se guarda directamente en el dispositivo
+function status(){const el=$('#net');if(el)el.textContent=(LOCAL.ok?'💾 En este dispositivo':'⚠️ Sin guardado')+(navigator.onLine?'':' · sin red')}
+window.addEventListener('online',status);window.addEventListener('offline',status);
+// Guarda (alta o cambio parcial) una finca en el almacén local y actualiza la lista en memoria.
+function queueSave(f,row){
+  const id=f.id||crypto.randomUUID(),i=LOCAL.mem.fincas.findIndex(x=>x.id===id);
+  const rec={...(i>=0?LOCAL.mem.fincas[i]:{}),...row,id};delete rec.anotaciones;delete rec._pending;if(!rec.parcelas)rec.parcelas=[];
+  if(i>=0)LOCAL.mem.fincas[i]=rec;else LOCAL.mem.fincas.push(rec);
+  const snap=clonar(rec);persistir(()=>idbPut('fincas',snap));
+  const j=fincas.findIndex(x=>x.id===id),ui={...rec,anotaciones:(j>=0?fincas[j].anotaciones:f.anotaciones)||[]};
+  if(j>=0)fincas[j]=ui;else fincas.push(ui);
+  return id}
 function mismaFincaVariedades(a,b){
   const fincaA=normaliza(a.finca),fincaB=normaliza(b.finca);
   const propA=normaliza(a.propietarios),propB=normaliza(b.propietarios);
@@ -641,7 +742,7 @@ function propagarUbicacionFinca(origen,lat,lng){
   }
   return total;
 }
-async function syncPending(){if(syncing||!navigator.onLine||!pendingSync.length)return;const session=(await sb.auth.getSession()).data.session;if(!session)return;syncing=true;try{for(const item of [...pendingSync]){const data={...item.row};let result;if(item.isNew){result=await sb.from('fincas').insert({...data,id:item.id})}else{result=await sb.from('fincas').update(data).eq('id',item.id)}if(result.error)throw result.error;pendingSync=pendingSync.filter(x=>x.id!==item.id);setStored(QUEUE_KEY,pendingSync)}await load();if(view==='list')render()}catch(e){console.warn('Sincronización pendiente:',e.message);toast('Hay cambios pendientes de sincronizar.')}finally{syncing=false;status()}}
+async function syncPending(){await LOCAL.chain;status()}
 
 const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',6000)};
 const lastVisit=f=>{const n=[...(f.anotaciones||[])].sort((a,b)=>a.fecha<b.fecha?1:-1);return n.length?n[0].fecha:null};
@@ -670,7 +771,7 @@ const cmpFincas=(a,b)=>{let r;if(orden==='superficie')r=(+b.superficie||0)-(+a.s
 function filtered(){return fincas.filter(f=>coincideBusqueda(f)).sort(cmpFincas)}
 function resetFiltros(){q='';qDraft='';orden='finca'}
 // ---------- diálogos propios (funcionan también sobre el mapa) ----------
-function dialogo({titulo,html,ok='Aceptar',cancel='Cancelar',peligro=false,palabra='',espera=0,leer=null}){
+function dialogo({titulo,html,ok='Aceptar',cancel='Cancelar',peligro=false,palabra='',espera=0,leer=null,abrir=null}){
   return new Promise(res=>{
     const bg=document.createElement('div');bg.className='modal-bg';
     bg.innerHTML=`<div class="modal" role="dialog" aria-modal="true"><h2 style="margin:0 0 8px;font-size:19px">${esc(titulo)}</h2><div>${html}</div>${palabra?`<label>Escribe <b>${esc(palabra)}</b> para confirmar</label><input id="dlgword" autocomplete="off" autocapitalize="characters" spellcheck="false">`:''}<div class="row" style="margin-top:14px">${cancel===null?'':`<button type="button" class="s" id="dlgno">${esc(cancel)}</button>`}<button type="button" id="dlgok" class="${peligro?'d':''}">${esc(ok)}</button></div></div>`;
@@ -680,7 +781,7 @@ function dialogo({titulo,html,ok='Aceptar',cancel='Cancelar',peligro=false,palab
     const pinta=()=>{okb.textContent=ok+(resto>0?' ('+resto+')':'');okb.disabled=resto>0||(!!palabra&&w.value.trim().toUpperCase()!==palabra)};
     pinta();if(resto>0)tm=setInterval(()=>{resto--;pinta();if(resto<=0)clearInterval(tm)},1000);
     if(w)w.oninput=pinta;
-    okb.onclick=()=>{if(!okb.disabled)fin(true)};if(no)no.onclick=()=>fin(false);
+    okb.onclick=()=>{if(!okb.disabled)fin(true)};if(abrir)abrir(bg,fin);if(no)no.onclick=()=>fin(false);
     bg.addEventListener('click',e=>{if(e.target===bg&&cancel!==null)fin(false)});
   });
 }
@@ -688,11 +789,10 @@ function dialogo({titulo,html,ok='Aceptar',cancel='Cancelar',peligro=false,palab
 async function eliminarSeleccionadas(){
   const items=[...sel].map(id=>fincas.find(f=>f.id===id)).filter(Boolean);
   if(!items.length)return toast('No hay fincas seleccionadas.');
-  if(!navigator.onLine)return toast('Sin conexión: para eliminar fincas necesitas Internet.');
   const nTxt=items.length+(items.length===1?' finca':' fincas');
   const totalHa=items.reduce((s,f)=>s+(+f.superficie||0),0);
   const lista=items.map(f=>`<li><b>${esc(f.finca||'(sin nombre)')}</b> — ${esc(f.propietarios||'sin propietario')} · ${esc(f.variedad||'sin variedad')} · ${esc(munis(f).join(', ')||'sin municipio')} · ${(+f.superficie||0).toLocaleString('es-ES',{maximumFractionDigits:4})} ha</li>`).join('');
-  const c1=await dialogo({titulo:'Eliminar '+nTxt,html:`<p>Vas a eliminar <b>únicamente</b> estas fincas (${totalHa.toLocaleString('es-ES',{maximumFractionDigits:2})} ha en total):</p><ul>${lista}</ul><p class="mu">Se borran también sus anotaciones y fotos. Otras fincas del mismo propietario o con la misma referencia SIGPAC <b>no</b> se tocan. Si dudas, descarga antes la copia de seguridad (🛡️).</p>`,ok:'Continuar',peligro:true});
+  const c1=await dialogo({titulo:'Eliminar '+nTxt,html:`<p>Vas a eliminar <b>únicamente</b> estas fincas (${totalHa.toLocaleString('es-ES',{maximumFractionDigits:2})} ha en total):</p><ul>${lista}</ul><p class="mu">Se borran también sus anotaciones, fotos y pruebas de madurez. Otras fincas del mismo propietario o con la misma referencia SIGPAC <b>no</b> se tocan. Si dudas, descarga antes la copia de seguridad (🛡️).</p>`,ok:'Continuar',peligro:true});
   if(!c1)return toast('Eliminación cancelada. No se ha borrado nada.');
   const c2=await dialogo({titulo:'Confirmación final',html:`<p><b>Segunda confirmación, independiente de la anterior.</b> Se eliminarán de forma definitiva <b>${nTxt}</b>. Esta acción no se puede deshacer.</p>`,ok:'Eliminar definitivamente',peligro:true,palabra:'ELIMINAR',espera:2});
   if(!c2)return toast('Eliminación cancelada. No se ha borrado nada.');
@@ -709,26 +809,25 @@ async function eliminarSeleccionadas(){
     }catch(e){fallos.push({f,msg:e.message||String(e)})}
   }
   const ids=new Set(hechas.map(f=>f.id));
-  pendingSync=pendingSync.filter(x=>!ids.has(x.id));setStored(QUEUE_KEY,pendingSync);
+  
   ids.forEach(id=>{sel.delete(id);try{localStorage.removeItem('fincas_autodraft_v29_'+id)}catch{}});
   await load();if(!fallos.length)selMode=false;render();
   if(fallos.length)await dialogo({titulo:'Eliminación incompleta',html:`<p>Eliminadas: <b>${hechas.length}</b>. No se han podido eliminar <b>${fallos.length}</b>:</p><ul>${fallos.map(x=>`<li>${esc(x.f.finca||'')}: ${esc(x.msg)}</li>`).join('')}</ul><p class="mu">Siguen seleccionadas para que puedas reintentarlo.</p>`,ok:'Aceptar',cancel:null});
   else toast('Eliminadas '+hechas.length+(hechas.length===1?' finca.':' fincas.')+' No se ha tocado ninguna otra.');
 }
 // ---------- sesión y datos ----------
-async function load(){const {data,error}=await sb.from('fincas').select('*, anotaciones(id,fecha,texto,fotos)').order('finca');if(error){fincas=getStored(CACHE_KEY);toast('Sin conexión con el servidor: mostrando copia local.');return}fincas=data||[];for(const item of pendingSync){const i=fincas.findIndex(f=>f.id===item.id);const row={...(i>=0?fincas[i]:{}),...item.row,id:item.id,_pending:true};if(i>=0)fincas[i]=row;else fincas.push(row)}setStored(CACHE_KEY,fincas)}
-// Mostrar la interfaz inmediatamente: no esperar a que Supabase restaure la sesión.
-render();status();
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(e=>console.warn('Service worker:',e));
-if(!sb){toast('No se ha podido cargar el servicio de conexión. Comprueba Internet y recarga la página.');}
-else {
-  sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'){fincas=[];mads=[];sel.clear();selMode=false;localStorage.removeItem(CACHE_KEY);localStorage.removeItem(QUEUE_KEY);pendingSync=[];view='login';render()}});
-  (async()=>{try{
-    const result=await Promise.race([sb.auth.getSession(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Tiempo de espera agotado al recuperar la sesión')),12000))]);
-    const data=result&&result.data;
-    if(data&&data.session){await load();view='list';render();syncPending();}
-  }catch(e){console.warn('No se pudo restaurar la sesión:',e);toast('No se ha podido recuperar la sesión. Puedes volver a iniciar sesión.');}})();
-}
+async function load(){const {data,error}=await sb.from('fincas').select('*, anotaciones(id,fecha,texto,fotos)').order('finca');if(error){toast('Error al leer los datos: '+error.message);return}fincas=data||[]}
+(async()=>{
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(e=>console.warn('Service worker:',e));
+  const app0=$('#app');if(app0)app0.innerHTML='<p class="mu" style="padding:20px">Cargando datos…</p>';
+  try{await localInit()}catch(e){console.warn('localInit',e)}
+  try{await load()}catch(e){console.warn('load',e)}
+  view='list';
+  try{render()}catch(e){mostrarFallo('Error al dibujar la pantalla: '+(e.message||e))}
+  status();
+  if(!LOCAL.ok)toast('⚠️ Este navegador no permite guardar datos: haz copias de seguridad con frecuencia. '+LOCAL.error);
+  setTimeout(()=>{ofrecerDatosAntiguos(false)},600);
+})();
 // ---------- fotos ----------
 async function signed(paths){const need=paths.filter(p=>!urlCache[p]);if(!need.length)return;const {data}=await sb.storage.from('fotos').createSignedUrls(need,3600);(data||[]).forEach(d=>{if(d.signedUrl)urlCache[d.path]=d.signedUrl})}
 function shrink(file,mx=1280,qd=.8){return createImageBitmap(file).then(bm=>{const k=Math.min(1,mx/Math.max(bm.width,bm.height)),c=document.createElement('canvas');c.width=Math.round(bm.width*k);c.height=Math.round(bm.height*k);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return new Promise(r=>c.toBlob(r,'image/jpeg',qd))})}
@@ -816,19 +915,12 @@ function abrirCompartirFinca(f){
 // ---------- vistas ----------
 function render(){
   const app=$('#app'),hb=$('#hb');status();
-  hb.innerHTML=(view==='list'||view==='mad')?'<button id="out">Salir</button>':(view==='login'?'':'<button id="bk">← Volver</button>');
+  hb.innerHTML=(view==='list'||view==='mad')?'<button id="out">⚙️ Datos</button>':'<button id="bk">← Volver</button>';
   const bk=$('#bk');if(bk)bk.onclick=()=>{if(view==='madform'){view='mad';medit=null;return render()}view=(view==='form'&&cur)?'detail':'list';if(view==='list'){cur=null;pend=[]}render()};
-  const o=$('#out');if(o)o.onclick=()=>sb.auth.signOut();
-  if(view==='login')return login(app);if(view==='list')return list(app);if(view==='detail')return detail(app);if(view==='mad')return mad(app);if(view==='madform')return madform(app);form(app);
+  const o=$('#out');if(o)o.onclick=()=>panelDatos();
+  if(view==='list')return list(app);if(view==='detail')return detail(app);if(view==='mad')return mad(app);if(view==='madform')return madform(app);form(app);
 }
-function login(app){
-  app.innerHTML=`<div class="card login-card"><img class="login-icon" src="icon-192.png" alt="Naranjas Fincas"><h2 style="margin:0">Fincas 2.39</h2><p class="mu">Tus fincas, siempre contigo. Inicia sesión una vez; permanecerás conectado en este dispositivo hasta que pulses Salir o caduque la sesión.</p><label>Email</label><input id="em" type="email" autocomplete="username"><label>Contraseña</label><input id="pw" type="password" autocomplete="current-password"><button id="go" style="width:100%;margin-top:14px">Entrar</button></div>`;
-  const go=async()=>{if(!sb)return toast('No se ha podido cargar el servicio de conexión. Comprueba Internet y recarga la página.');const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return toast('Email o contraseña incorrectos.');await load();view='list';render()};
-  $('#go').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()};
-}
-
 async function importarExcelFincas(file){
-  if(!navigator.onLine)return toast('Para importar fincas necesitas conexión a Internet.');
   if(typeof XLSX==='undefined')return toast('No se ha podido cargar el lector de Excel.');
   let wb,rows;
   try{
@@ -870,8 +962,6 @@ async function importarExcelFincas(file){
   const summary=`Archivo: ${file.name}\nFilas leídas: ${rows.length}\nRegistros importables: ${valid.length}\nCoincidencias ya existentes: ${duplicates.length}\nSin nombre de finca o variedad: ${skipped}\n\nSe importarán ${fresh.length} registros nuevos. ¿Continuar?`;
   if(!fresh.length)return toast('No hay registros nuevos para importar. Duplicados: '+duplicates.length+' · incompletos: '+skipped);
   if(!confirm(summary))return;
-  const session=(await sb.auth.getSession()).data.session;
-  if(!session)return toast('La sesión ha caducado. Vuelve a iniciar sesión.');
   let imported=0,errors=0,metadata=0,firstError="";
   for(const r of fresh){
     const prov=PROVINCIAS.find(p=>normaliza(p[1])===normaliza(r.provincia));
@@ -915,7 +1005,7 @@ function pintarLista(){
 }
 function list(app){
   for(const id of [...sel])if(!fincas.some(f=>f.id===id))sel.delete(id);
-  app.innerHTML=tabsHtml('list')+`<div class="search-main"><input id="q" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Buscar en todo: propietario, finca, variedad, municipio, ha, patrón…" value="${esc(qDraft)}" aria-label="Buscador universal"><button id="new" type="button" class="s">＋ Nueva</button><button id="selmode" type="button" class="${selMode?'d':'s'}">${selMode?'✕ Salir':'☑ Seleccionar'}</button></div>
+  app.innerHTML=tabsHtml('list')+avisoCopiaHtml()+`<div class="search-main"><input id="q" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Buscar en todo: propietario, finca, variedad, municipio, ha, patrón…" value="${esc(qDraft)}" aria-label="Buscador universal"><button id="new" type="button" class="s">＋ Nueva</button><button id="selmode" type="button" class="${selMode?'d':'s'}">${selMode?'✕ Salir':'☑ Seleccionar'}</button></div>
   <div class="order-row"><label for="orden">Ordenar por</label><select id="orden"><option value="finca" ${orden==='finca'?'selected':''}>Finca</option><option value="propietarios" ${orden==='propietarios'?'selected':''}>Propietario</option><option value="variedad" ${orden==='variedad'?'selected':''}>Variedad</option><option value="municipio" ${orden==='municipio'?'selected':''}>Municipio</option><option value="superficie" ${orden==='superficie'?'selected':''}>Superficie (mayor primero)</option></select></div>
   <p class="mu" id="resumen"></p>
   ${selMode?'<div class="note">Modo selección: marca las fincas que quieres eliminar y pulsa «Eliminar». Solo se borran las fincas marcadas, aunque otras compartan propietario o referencia SIGPAC.</div>':''}
@@ -927,7 +1017,7 @@ function list(app){
   $('#q').oninput=e=>{qDraft=e.target.value;q=qDraft.trim();clearTimeout(tq);tq=setTimeout(pintarLista,150)};
   $('#q').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();clearTimeout(tq);q=qDraft.trim();pintarLista();e.target.blur()}};
   $('#orden').onchange=e=>{orden=e.target.value;pintarLista()};
-  $('#new').onclick=()=>{cur=null;draft={};pend=[];view='form';render()};bindTabs();
+  $('#new').onclick=()=>{cur=null;draft={};pend=[];view='form';render()};bindTabs();const ac=$('#avCopia');if(ac)ac.onclick=()=>exportBackup();const al=$('#avLuego');if(al)al.onclick=()=>{avisoCopiaOculto=true;render()};
   $('#selmode').onclick=()=>{selMode=!selMode;if(!selMode)sel.clear();render()};
   $('#selvis').onclick=()=>{filtered().forEach(f=>sel.add(f.id));pintarLista()};
   $('#selnone').onclick=()=>{sel.clear();pintarLista()};
@@ -988,7 +1078,6 @@ function detail(app){
   bindPicker();
   app.querySelectorAll('.ndel').forEach(b=>{let armed=false;b.onclick=async()=>{
     if(!armed){armed=true;b.textContent='¿Eliminar?';b.classList.remove('s');b.classList.add('d');setTimeout(()=>{armed=false;b.textContent='🗑';b.classList.remove('d');b.classList.add('s')},4000);return}
-    if(!navigator.onLine)return toast('Sin conexión: no se puede eliminar ahora.');
     const n=notas.find(x=>x.id===b.dataset.id);if(!n)return;b.disabled=true;
     const {error}=await sb.from('anotaciones').delete().eq('id',n.id);if(error){b.disabled=false;return toast('No se pudo eliminar: '+error.message)}
     if((n.fotos||[]).length)await sb.storage.from('fotos').remove(n.fotos);
@@ -1005,7 +1094,7 @@ function detail(app){
   const guardarFila=(row,parcelas,extra={})=>{
     const id=queueSave(row,{parcelas,...extra});if(!id)return false;
     render();
-    syncPending().then(()=>toast(pendingSync.some(x=>x.id===id)?'Guardado en este dispositivo; se sincronizará al recuperar la conexión.':'Cambios sincronizados con Supabase.'));
+    syncPending().then(()=>toast('Cambios guardados en este dispositivo.'));
     return true;
   };
   const buscarMed=key=>{for(const row of filasRelacionadas()){const ps=clonarParcelas(row);for(let i=0;i<ps.length;i++){const ms=ps[i].mediciones;if(!Array.isArray(ms))continue;const j=ms.findIndex(m=>medKey(m)===key);if(j>=0)return {row,ps,i,j}}}return null};
@@ -1060,7 +1149,7 @@ function detail(app){
         const id=queueSave(cur0,row);if(!id){toast('No se pudieron guardar los recintos.');return false}
         render();
         syncPending().then(()=>toast(nuevos.length+' recinto(s) SIGPAC añadidos a '+(cur0.finca||'la finca')+'.'));
-        toast('Recintos añadidos a la ficha. Sincronizando…');
+        toast('Recintos añadidos a la ficha.');
         return true;
       }
     });
@@ -1203,7 +1292,7 @@ function form(app){
       f.id=id;draft=f;cur=id;dirty=false;
       localStorage.removeItem(AUTO_KEY);
       if(navigator.onLine)await syncPending();
-      const st=$('#auto_state');if(st)st.textContent=(pendingSync.some(x=>x.id===id)?'⏳ Guardado local; sincronización pendiente':'☁️ Sincronizado')+(compartidas?' · ubicación compartida con '+compartidas+' variedad(es)':'')+' · '+new Date().toLocaleTimeString('es-ES');
+      const st=$('#auto_state');if(st)st.textContent='💾 Guardado en este dispositivo'+(compartidas?' · ubicación compartida con '+compartidas+' variedad(es)':'')+' · '+new Date().toLocaleTimeString('es-ES');
     }catch(e){console.warn('Autoguardado:',e);saveLocal()}
     finally{autoBusy=false}
   };
@@ -1218,7 +1307,7 @@ function form(app){
     const p0=lp[0]||{},g=lp.find(p=>num(p.lat)!=null&&num(p.lng)!=null)||{lat:f.lat,lng:f.lng};
     const parcelas=lp.map(parcelaOut);
     const row={finca:f.finca,propietarios:f.propietarios,variedad:f.variedad,patron:f.patron,superficie:num(f.superficie),marco_a:num(f.marco_a),marco_b:num(f.marco_b),municipio:p0.municipio||'',poligono:String(p0.poligono||''),parcela:String(p0.parcela||''),recinto:p0.recinto?String(p0.recinto):null,lat:num(g.lat),lng:num(g.lng),prov_cod:p0.prov_cod||null,mun_cod:p0.mun_cod||null,parcelas};
-    if(!navigator.onLine){if(pend.length||($('#f_nota')&&$('#f_nota').value.trim())){toast('Sin conexión: guarda primero la finca sin fotos ni anotación.');b.disabled=false;b.textContent='Guardar';return}const id=queueSave(f,row);if(id){const compartidas=propagarUbicacionFinca({...f,...row,id},g.lat,g.lng);localStorage.removeItem(AUTO_KEY);cur=id;view='detail';render();toast('Guardada en este dispositivo.'+(compartidas?' Ubicación compartida con '+compartidas+' variedad(es).':'')+' Se sincronizará al recuperar Internet.')}else{b.disabled=false;b.textContent='Guardar'}return}
+
     try{let id=f.id;
       if(id){const {error}=await sb.from('fincas').update(row).eq('id',id);if(error)throw error}
       else{const {data,error}=await sb.from('fincas').insert(row).select().single();if(error)throw error;id=data.id;
@@ -1258,7 +1347,6 @@ function mad(app){
   $('#mpdf').onclick=()=>{const ids=new Set([...app.querySelectorAll('.mcheck:checked')].map(x=>x.dataset.id));if(!ids.size)return toast('Selecciona al menos una muestra para el informe PDF.');exportMadPdf(rows.filter(m=>ids.has(String(m.id))))};
   app.querySelectorAll('.mdel').forEach(b=>{let armed=false;b.onclick=async ev=>{ev.stopPropagation();
     if(!armed){armed=true;b.textContent='¿Eliminar?';b.classList.remove('s');b.classList.add('d');setTimeout(()=>{armed=false;b.textContent='🗑';b.classList.remove('d');b.classList.add('s')},4000);return}
-    if(!navigator.onLine)return toast('Sin conexión: no se puede eliminar ahora.');
     b.disabled=true;const {error}=await sb.from('madurez').delete().eq('id',b.dataset.id);if(error){b.disabled=false;return toast('No se pudo eliminar: '+error.message)}
     await loadMad();render()}});
   $('#mcsv').onclick=()=>{if(!rows.length)return toast('No hay pruebas con ese filtro.');const c=v=>'"'+String(v??'').replace(/"/g,'""')+'"',n=v=>v==null?'':String(v).replace('.',',');
@@ -1308,7 +1396,7 @@ function madform(app){
   ['m_brix','m_sosa','m_pm','m_pz'].forEach(i=>$('#'+i).oninput=upd);upd();
   $('#m_finca').onchange=e=>{const fx=fincas.find(x=>String(x.id)===String(e.target.value));$('#m_propietario').textContent=fx?(fx.propietarios||'Sin propietario'):'Selecciona una finca';if(fx&&fx.variedad)$('#m_var').innerHTML=varOpts(fx.variedad)};
   $('#m_cn').onclick=()=>{view='mad';medit=null;render()};
-  $('#m_ok').onclick=async()=>{if(!navigator.onLine)return toast('Sin conexión: no se puede guardar la prueba. Inténtalo cuando tengas Internet.');
+  $('#m_ok').onclick=async()=>{
     const row={fecha:$('#m_fecha').value||hoy,finca_id:$('#m_finca').value||null,variedad:$('#m_var').value||null,brix:num($('#m_brix').value),sosa_ml:num($('#m_sosa').value),peso_muestra:num($('#m_pm').value),peso_zumo:num($('#m_pz').value),calibres:$('#m_cal').value.trim()||null};
     if(row.brix==null&&row.sosa_ml==null&&row.peso_muestra==null&&row.peso_zumo==null)return toast('Introduce al menos un dato.');
     const b=$('#m_ok');b.disabled=true;b.textContent='Guardando…';
@@ -1322,62 +1410,149 @@ function madform(app){
 const BACKUP_FORMAT='fincas-respaldo',BACKUP_VERSION=1;
 const BACKUP_FIELDS=['finca','propietarios','variedad','patron','superficie','marco_a','marco_b','municipio','poligono','parcela','recinto','lat','lng','prov_cod','mun_cod','parcelas'];
 function safeBackupRow(obj,fields){return Object.fromEntries(fields.filter(k=>Object.prototype.hasOwnProperty.call(obj,k)).map(k=>[k,obj[k]]))}
-async function allBackupRows(table,selection='*'){
-  const result=[];for(let offset=0;offset<100000;offset+=500){const {data,error}=await sb.from(table).select(selection).range(offset,offset+499);if(error)throw Error(table+': '+error.message);result.push(...(data||[]));if(!data||data.length<500)return result}
-  throw Error('Demasiados registros; no se ha generado una copia incompleta.');
-}
+// ---------- copias de seguridad, restauración y migración ----------
+const ULTIMA_COPIA_KEY='fincas3_ultima_copia';
+const ultimaCopia=()=>{try{return localStorage.getItem(ULTIMA_COPIA_KEY)||''}catch{return ''}};
+function marcarCopia(iso){try{localStorage.setItem(ULTIMA_COPIA_KEY,iso)}catch{}persistir(()=>idbPut('meta',{k:'ultima_copia',v:iso}))}
+let avisoCopiaOculto=false;
+function avisoCopiaHtml(){
+  if(avisoCopiaOculto||!fincas.length)return '';
+  const u=ultimaCopia(),dias=u?Math.floor((Date.now()-new Date(u).getTime())/864e5):null;
+  if(u&&dias<14)return '';
+  return `<div class="note" style="border-left:4px solid var(--dn)"><b>⚠️ Tus datos solo están en este dispositivo.</b> ${u?'Última copia de seguridad hace '+dias+' días.':'Todavía no has hecho ninguna copia de seguridad.'}<div class="row" style="margin-top:6px"><button class="s" id="avCopia" type="button">🛡️ Hacer copia ahora</button><button class="s" id="avLuego" type="button">Más tarde</button></div></div>`}
+const bufToDataUrl=rec=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(new Blob([rec.buf],{type:rec.type||'image/jpeg'}))});
+const dataUrlToBlob=du=>{const [h,b64]=String(du).split(','),type=(/data:([^;]+)/.exec(h)||[])[1]||'image/jpeg',bin=atob(b64),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);return new Blob([u8],{type})};
+async function entregarArchivo(name,blob){
+  const nombre=safeFileName(name),file=new File([blob],nombre,{type:blob.type||'application/octet-stream'});
+  try{if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:nombre});return 'share'}}catch(e){if(e&&e.name==='AbortError')return 'cancel'}
+  dl(nombre,blob);return 'dl'}
 async function exportBackup(){
-  if(!navigator.onLine)return toast('Conéctate a Internet para obtener una copia completa.');
-  if(pendingSync.length)return toast('Sincroniza los cambios pendientes antes de hacer la copia.');
-  if(typeof XLSX==='undefined')return toast('Necesitas conexión para cargar el generador Excel.');
-  const btn=$('#backup'),old=btn?btn.innerHTML:'';
-  if(btn){btn.disabled=true;btn.textContent='Preparando…'}
+  const r=await dialogo({titulo:'Copia de seguridad',html:`<p class="mu">Todos tus datos están guardados solo en este dispositivo. Guarda la copia en iCloud Drive / Archivos, o envíatela por correo.</p><label class="chk"><input type="radio" name="bkf" value="json" checked><span><b>Copia completa (.json) · recomendada</b><br>Incluye fotografías y es la única que lo restaura todo.</span></label><label class="chk"><input type="radio" name="bkf" value="jsonsf"><span>Copia sin fotos (.json), mucho más ligera</span></label><label class="chk"><input type="radio" name="bkf" value="xlsx"><span>Copia Excel (.xlsx) sin fotos, legible en Excel</span></label>`,ok:'Generar copia',leer:bg=>bg.querySelector('input[name=bkf]:checked').value});
+  if(!r)return;
+  const btn=$('#backup'),old=btn?btn.innerHTML:'';if(btn){btn.disabled=true;btn.textContent='Preparando…'}
   try{
-    const {data:{user}}=await sb.auth.getUser();if(!user)throw Error('Inicia sesión.');
-    const [fs,ns,ms]=await Promise.all([allBackupRows('fincas'),allBackupRows('anotaciones'),allBackupRows('madurez')]);
-    const wb=XLSX.utils.book_new(),fecha=new Date().toISOString();
-    const meta=[{formato:BACKUP_FORMAT,version:BACKUP_VERSION,fecha,usuario:user.id,fincas:fs.length,anotaciones:ns.length,madurez:ms.length,nota:'No incluye archivos binarios de fotografías'}];
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(meta),'CONTROL');
-    for(const [name,rows] of [['FINCAS',fs],['ANOTACIONES',ns],['MADUREZ',ms]]){
-      const sh=XLSX.utils.json_to_sheet(rows.map(row=>({id:row.id,registro_json:JSON.stringify(row)})));
-      if(!rows.length)XLSX.utils.sheet_add_aoa(sh,[['id','registro_json']],{origin:'A1'});
-      sh['!cols']=[{wch:38},{wch:90}];XLSX.utils.book_append_sheet(wb,sh,name);
-    }
-    XLSX.writeFile(wb,'CopiaSeguridadFincas.xlsx');
-    localStorage.setItem('fincas_ultima_copia_manual',fecha);
-    toast('Excel generado: '+fs.length+' fincas, '+ns.length+' anotaciones, '+ms.length+' pruebas. Guárdalo en iCloud Drive.');
-  }catch(e){alert('No se pudo generar la copia: '+e.message)}
+    await LOCAL.chain;
+    const fecha=new Date().toISOString(),fs=LOCAL.mem.fincas,ns=LOCAL.mem.anotaciones,ms=LOCAL.mem.madurez;
+    let blob,nombre,nFotos=0;
+    if(r==='xlsx'){
+      if(typeof XLSX==='undefined')throw Error('El generador Excel no está disponible (se descarga la primera vez con Internet). Usa la copia .json.');
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{formato:BACKUP_FORMAT,version:BACKUP_VERSION,fecha,usuario:'local',fincas:fs.length,anotaciones:ns.length,madurez:ms.length,nota:'No incluye archivos binarios de fotografías'}]),'CONTROL');
+      for(const [name,rows] of [['FINCAS',fs],['ANOTACIONES',ns],['MADUREZ',ms]]){const sh=XLSX.utils.json_to_sheet(rows.map(row=>({id:row.id,registro_json:JSON.stringify(row)})));if(!rows.length)XLSX.utils.sheet_add_aoa(sh,[['id','registro_json']],{origin:'A1'});sh['!cols']=[{wch:38},{wch:90}];XLSX.utils.book_append_sheet(wb,sh,name)}
+      XLSX.writeFile(wb,'CopiaSeguridadFincas.xlsx');
+      marcarCopia(fecha);toast('Excel generado: '+fs.length+' fincas, '+ns.length+' anotaciones, '+ms.length+' pruebas.');return}
+    const parts=['{"formato":'+JSON.stringify(BACKUP_FORMAT)+',"version":'+BACKUP_VERSION+',"fecha":'+JSON.stringify(fecha)+',"usuario":"local","app":"Fincas 3.0","contenido":'+JSON.stringify({fincas:fs,anotaciones:ns,madurez:ms})];
+    if(r==='json'){
+      parts.push(',"fotos":{');let first=true;const paths=[...new Set(ns.flatMap(n=>n.fotos||[]))];
+      for(const p of paths){const rec=await fotoGet(p);if(!rec)continue;if(btn)btn.textContent='Fotos '+(nFotos+1)+'/'+paths.length;parts.push((first?'':',')+JSON.stringify(p)+':'+JSON.stringify(await bufToDataUrl(rec)));first=false;nFotos++}
+      parts.push('}')}
+    parts.push('}');
+    blob=new Blob(parts,{type:'application/json'});nombre='CopiaFincas_'+fecha.slice(0,10)+(r==='json'?'':'_sin_fotos')+'.json';
+    const how=await entregarArchivo(nombre,blob);
+    if(how!=='cancel'){marcarCopia(fecha);toast('Copia generada: '+fs.length+' fincas, '+ns.length+' anotaciones, '+ms.length+' pruebas'+(r==='json'?', '+nFotos+' fotos':'')+'. Guárdala en iCloud Drive / Archivos.')}
+  }catch(e){alert('No se pudo generar la copia: '+(e&&e.message||e))}
   finally{if(btn){btn.disabled=false;btn.innerHTML=old}}
 }
 async function restoreBackup(file){
-  if(!navigator.onLine)return toast('Debes estar conectado para restaurar.');
-  if(pendingSync.length)return toast('Sincroniza antes los cambios pendientes.');
   try{
-    if(file.size>25*1024*1024)throw Error('Archivo demasiado grande (máximo 25 MB).');
+    if(file.size>700*1024*1024)throw Error('Archivo demasiado grande (máximo 700 MB).');
     let doc;
     if(/\.xlsx$/i.test(file.name)){
       if(typeof XLSX==='undefined')throw Error('No se ha cargado la biblioteca Excel.');
       const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
       for(const sheet of ['CONTROL','FINCAS','ANOTACIONES','MADUREZ'])if(!wb.Sheets[sheet])throw Error('Falta la hoja '+sheet);
-      const control=XLSX.utils.sheet_to_json(wb.Sheets.CONTROL)[0];
-      if(!control)throw Error('Hoja de control vacía.');
+      const control=XLSX.utils.sheet_to_json(wb.Sheets.CONTROL)[0];if(!control)throw Error('Hoja de control vacía.');
       const parseRows=sheet=>XLSX.utils.sheet_to_json(wb.Sheets[sheet]).map(row=>JSON.parse(row.registro_json));
-      doc={formato:control.formato,version:Number(control.version),fecha:control.fecha,usuario:control.usuario,contenido:{fincas:parseRows('FINCAS'),anotaciones:parseRows('ANOTACIONES'),madurez:parseRows('MADUREZ')}};
+      doc={formato:control.formato,version:Number(control.version),fecha:control.fecha,contenido:{fincas:parseRows('FINCAS'),anotaciones:parseRows('ANOTACIONES'),madurez:parseRows('MADUREZ')}};
     }else{doc=JSON.parse(await file.text())}
     if(doc.formato!==BACKUP_FORMAT||doc.version!==BACKUP_VERSION||!doc.contenido||!['fincas','anotaciones','madurez'].every(k=>Array.isArray(doc.contenido[k])))throw Error('Copia incompatible.');
-    const {data:{user}}=await sb.auth.getUser();if(!user)throw Error('Debes iniciar sesión.');
-    if(doc.usuario!==user.id)throw Error('Esta copia pertenece a otra cuenta.');
-    const fs=doc.contenido.fincas,ns=doc.contenido.anotaciones,ms=doc.contenido.madurez;
+    const fs=doc.contenido.fincas,ns=doc.contenido.anotaciones,ms=doc.contenido.madurez,fotos=doc.fotos&&typeof doc.fotos==='object'?doc.fotos:{};
     if(fs.length>10000||ns.length>100000||ms.length>100000)throw Error('Se exceden los límites admitidos.');
-    if(!confirm('Restaurar copia de '+new Date(doc.fecha).toLocaleString('es-ES')+'\n'+fs.length+' fincas · '+ns.length+' anotaciones · '+ms.length+' pruebas.\n\nSolo se añadirán registros que no existan. ¿Continuar?'))return;
-    const [liveF,liveN,liveM]=await Promise.all([allBackupRows('fincas','id'),allBackupRows('anotaciones','id'),allBackupRows('madurez','id')]);
-    const seenF=new Set(liveF.map(x=>x.id)),seenN=new Set(liveN.map(x=>x.id)),seenM=new Set(liveM.map(x=>x.id));
-    let countF=0,countN=0,countM=0;
-    for(const f of fs){if(!f||typeof f.id!=='string'||seenF.has(f.id))continue;const row={id:f.id,...safeBackupRow(f,BACKUP_FIELDS)};const {error}=await sb.from('fincas').insert(row);if(error)throw Error('Finca '+(f.finca||f.id)+': '+error.message);seenF.add(f.id);countF++}
-    for(const n of ns){if(!n||typeof n.id!=='string'||seenN.has(n.id)||!seenF.has(n.finca_id))continue;const row={id:n.id,finca_id:n.finca_id,...safeBackupRow(n,['fecha','texto','fotos'])};const {error}=await sb.from('anotaciones').insert(row);if(error)throw Error('Anotación '+n.id+': '+error.message);seenN.add(n.id);countN++}
-    for(const m of ms){if(!m||typeof m.id!=='string'||seenM.has(m.id)||(m.finca_id&&!seenF.has(m.finca_id)))continue;const row={id:m.id,...safeBackupRow(m,['fecha','finca_id','variedad','brix','sosa_ml','peso_muestra','peso_zumo','calibres'])};const {error}=await sb.from('madurez').insert(row);if(error)throw Error('Madurez '+m.id+': '+error.message);seenM.add(m.id);countM++}
-    await load();view='list';render();alert('Recuperación terminada. Añadidas: '+countF+' fincas, '+countN+' anotaciones y '+countM+' pruebas.\nLas imágenes no están incluidas.');
-  }catch(e){await load();render();alert('Recuperación interrumpida: '+e.message+'\nLos registros ya importados permanecen guardados.');}
+    if(!confirm('Restaurar copia de '+new Date(doc.fecha).toLocaleString('es-ES')+'\n'+fs.length+' fincas · '+ns.length+' anotaciones · '+ms.length+' pruebas · '+Object.keys(fotos).length+' fotos.\n\nSolo se añadirán registros que no existan en este dispositivo; no se modifica ni borra nada. ¿Continuar?'))return;
+    const seenF=new Set(LOCAL.mem.fincas.map(x=>x.id)),seenN=new Set(LOCAL.mem.anotaciones.map(x=>x.id)),seenM=new Set(LOCAL.mem.madurez.map(x=>x.id));
+    let cF=0,cN=0,cM=0,cP=0,sinFoto=0;
+    for(const f of fs){if(!f||typeof f.id!=='string'||seenF.has(f.id))continue;const {error}=await sb.from('fincas').insert({id:f.id,...safeBackupRow(f,BACKUP_FIELDS)});if(error)throw Error('Finca '+(f.finca||f.id)+': '+error.message);seenF.add(f.id);cF++}
+    for(const n of ns){if(!n||typeof n.id!=='string'||seenN.has(n.id)||!seenF.has(n.finca_id))continue;
+      const keep=[];for(const p of (Array.isArray(n.fotos)?n.fotos:[])){if(fotos[p]){await fotoPut(p,dataUrlToBlob(fotos[p]));keep.push(p);cP++}else if(await fotoGet(p))keep.push(p);else sinFoto++}
+      const {error}=await sb.from('anotaciones').insert({id:n.id,finca_id:n.finca_id,...safeBackupRow(n,['fecha','texto']),fotos:keep});if(error)throw Error('Anotación '+n.id+': '+error.message);seenN.add(n.id);cN++}
+    for(const m of ms){if(!m||typeof m.id!=='string'||seenM.has(m.id)||(m.finca_id&&!seenF.has(m.finca_id)))continue;const {error}=await sb.from('madurez').insert({id:m.id,...safeBackupRow(m,['fecha','finca_id','variedad','brix','sosa_ml','peso_muestra','peso_zumo','calibres'])});if(error)throw Error('Madurez '+m.id+': '+error.message);seenM.add(m.id);cM++}
+    await load();view='list';render();alert('Recuperación terminada. Añadidas: '+cF+' fincas, '+cN+' anotaciones, '+cM+' pruebas y '+cP+' fotos.'+(sinFoto?'\n'+sinFoto+' referencias a fotos no estaban en la copia.':''));
+  }catch(e){await load();render();alert('Recuperación interrumpida: '+(e&&e.message||e)+'\nLos registros ya importados permanecen guardados.')}
+}
+// ---- datos de la versión 2.x que sigan guardados en este dispositivo (caché local) ----
+async function ofrecerDatosAntiguos(forzar){
+  try{
+    const cache=getStored(CACHE_KEY);if(!Array.isArray(cache)||!cache.length){if(forzar)toast('No hay datos de la versión anterior guardados en este dispositivo.');return}
+    if(!forzar&&(LOCAL.mem.fincas.length||localStorage.getItem('fincas3_ls_v2_visto')))return;
+    const nuevas=cache.filter(f=>f&&typeof f.id==='string'&&!LOCAL.mem.fincas.some(x=>x.id===f.id));
+    if(!nuevas.length){if(forzar)toast('Todo lo de la versión anterior ya está en este dispositivo.');return}
+    const ok=await dialogo({titulo:'Datos de la versión anterior',html:`<p>Se han encontrado <b>${nuevas.length}</b> fincas de la versión anterior guardadas en este dispositivo (sin fotos). ¿Quieres importarlas?</p><p class="mu">No se borra nada de la versión anterior. Las fotos puedes traerlas después desde ⚙️ Datos → «Traer datos de la versión anterior (nube)».</p>`,ok:'Importar',cancel:'Ahora no'});
+    try{localStorage.setItem('fincas3_ls_v2_visto','1')}catch{}
+    if(!ok)return;
+    let n=0,na=0;
+    for(const f of nuevas){const {anotaciones,_pending,user_id,...row}=f;const r=await sb.from('fincas').insert(row);if(r.error)continue;n++;
+      for(const a of (anotaciones||[])){if(!a||typeof a.id!=='string')continue;const x=await sb.from('anotaciones').insert({id:a.id,finca_id:f.id,fecha:a.fecha,texto:a.texto,fotos:Array.isArray(a.fotos)?a.fotos:[]});if(!x.error)na++}}
+    await load();render();toast('Importadas '+n+' fincas y '+na+' anotaciones de la versión anterior.');
+  }catch(e){console.warn('Datos antiguos',e)}
+}
+// ---- migración puntual desde Supabase (la app NO lo usa para trabajar; solo para copiar tus datos antiguos aquí) ----
+const MIG_URL='https://dpjgnxpspxtzvdzgswpt.supabase.co',MIG_KEY='sb_publishable_In3dH13yFyrxqd6RgvQn2Q_oI5yoBxF';
+// Traspaso puntual por la API web directa (sin descargar ninguna biblioteca): solo LEE la nube y copia aquí lo que falte.
+async function migrarDesdeSupabase(){
+  if(!navigator.onLine)return toast('Necesitas Internet para traer los datos de la versión anterior.');
+  const cred=await dialogo({titulo:'Traer datos de la versión anterior',html:`<p class="mu">Copia a este dispositivo lo que tienes en la nube (fincas, anotaciones, pruebas de madurez y fotos). <b>No borra ni modifica nada en la nube</b> y solo añade lo que aún no tengas aquí. Es una operación puntual: después la app ya no necesita ese servicio.</p><label>Email</label><input id="mg_em" type="email" autocomplete="username"><label>Contraseña</label><input id="mg_pw" type="password" autocomplete="current-password">`,ok:'Traer datos',leer:bg=>({em:bg.querySelector('#mg_em').value.trim(),pw:bg.querySelector('#mg_pw').value})});
+  if(!cred)return;if(!cred.em||!cred.pw)return toast('Escribe tu email y contraseña de la versión anterior.');
+  try{
+    toast('Conectando…');
+    const tk=await fetch(MIG_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:MIG_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:cred.em,password:cred.pw})});
+    const tj=await tk.json().catch(()=>({}));if(!tk.ok||!tj.access_token)throw Error('Email o contraseña incorrectos.');
+    const H1={apikey:MIG_KEY,Authorization:'Bearer '+tj.access_token};
+    const traer=async t=>{const out=[];for(let o=0;o<100000;o+=500){const r=await fetch(`${MIG_URL}/rest/v1/${t}?select=*&order=id.asc&limit=500&offset=${o}`,{headers:H1});if(!r.ok)throw Error(t+': HTTP '+r.status);const d=await r.json();out.push(...d);if(d.length<500)break}return out};
+    const urlFoto=async p=>{const r=await fetch(`${MIG_URL}/storage/v1/object/sign/fotos/${p.split('/').map(encodeURIComponent).join('/')}`,{method:'POST',headers:{...H1,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:600})});if(!r.ok)throw Error('sin url');const j=await r.json();return MIG_URL+'/storage/v1'+j.signedURL};
+    toast('Descargando registros…');
+    const rf=await traer('fincas'),rn=await traer('anotaciones'),rm=await traer('madurez');
+    const idsF=new Set(LOCAL.mem.fincas.map(x=>x.id)),idsN=new Set(LOCAL.mem.anotaciones.map(x=>x.id)),idsM=new Set(LOCAL.mem.madurez.map(x=>x.id));
+    let cF=0,cN=0,cM=0,cP=0,pFalla=0;
+    for(const f of rf){if(idsF.has(f.id))continue;const {user_id,anotaciones,...row}=f;const r=await sb.from('fincas').insert(row);if(!r.error){idsF.add(f.id);cF++}}
+    for(const n of rn){
+      if(!idsF.has(n.finca_id))continue;
+      const paths=Array.isArray(n.fotos)?n.fotos:[];
+      for(const p of paths){if(await fotoGet(p))continue;
+        try{const resp=await fetch(await urlFoto(p));if(!resp.ok)throw Error('http '+resp.status);await fotoPut(p,await resp.blob());cP++;toast('Fotos descargadas: '+cP)}catch(e){pFalla++}}
+      if(idsN.has(n.id)){const loc=LOCAL.mem.anotaciones.find(x=>x.id===n.id);if(loc&&(!loc.fotos||!loc.fotos.length)&&paths.length)await sb.from('anotaciones').update({fotos:paths}).eq('id',n.id);continue}
+      const {user_id,...row}=n;const r=await sb.from('anotaciones').insert(row);if(!r.error){idsN.add(n.id);cN++}}
+    for(const m of rm){if(idsM.has(m.id)||(m.finca_id&&!idsF.has(m.finca_id)))continue;const {user_id,...row}=m;const r=await sb.from('madurez').insert(row);if(!r.error){idsM.add(m.id);cM++}}
+    await load();view='list';render();
+    alert('Traspaso terminado.\nAñadidas: '+cF+' fincas, '+cN+' anotaciones, '+cM+' pruebas y '+cP+' fotos.'+(pFalla?'\n'+pFalla+' fotos no se pudieron descargar.':'')+'\n\nTus datos en la nube no se han tocado. Haz ahora una copia de seguridad (🛡️).');
+  }catch(e){await load();render();alert('No se pudo completar el traspaso: '+(e&&e.message||e)+'\nLo que ya se había copiado permanece guardado.')}
+}
+// ---- panel «Datos» ----
+async function panelDatos(){
+  let fotosN=0,uso='';
+  try{fotosN=LOCAL.ok?await idbCount('fotos'):LOCAL.fotosMem.size}catch{}
+  try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();uso=' · espacio usado: '+((e.usage||0)/1048576).toFixed(1)+' MB'}}catch{}
+  const u=ultimaCopia();
+  const html=`<p><b>💾 Tus datos están guardados en este dispositivo</b> (no dependen de ningún servidor).</p><p class="mu">${LOCAL.mem.fincas.length} fincas · ${LOCAL.mem.anotaciones.length} anotaciones · ${fotosN} fotos · ${LOCAL.mem.madurez.length} pruebas de madurez${uso}<br>Última copia de seguridad: ${u?new Date(u).toLocaleString('es-ES'):'<b>ninguna</b>'}<br>Almacenamiento permanente: ${LOCAL.persisted===true?'sí':'no garantizado'}${LOCAL.ok?'':'<br><b>⚠️ Este navegador no permite guardar datos: haz copias con frecuencia.</b>'}</p>
+  <div class="row w" style="flex-direction:column;align-items:stretch;gap:8px"><button type="button" id="pd_bk">🛡️ Hacer copia de seguridad</button><button type="button" class="s" id="pd_rs">♻️ Restaurar copia (.json / .xlsx)</button><button type="button" class="s" id="pd_mg">☁️ Traer datos de la versión anterior (nube)</button><button type="button" class="s" id="pd_ls">🔎 Buscar datos de la versión anterior en este dispositivo</button><button type="button" class="d" id="pd_del">🗑 Borrar todos los datos de este dispositivo</button></div>
+  <p class="mu" style="margin-top:10px">Consejo: instala la app en la pantalla de inicio y haz una copia al menos cada semana. Si borras los datos del navegador o desinstalas la app sin copia, no se pueden recuperar.</p>`;
+  await dialogo({titulo:'⚙️ Datos y copias',html,ok:'Cerrar',cancel:null,abrir:(bg,fin)=>{
+    const go=f=>()=>{fin(true);setTimeout(f,50)};
+    bg.querySelector('#pd_bk').onclick=go(exportBackup);
+    bg.querySelector('#pd_rs').onclick=go(()=>{const i=document.createElement('input');i.type='file';i.accept='.json,.xlsx,application/json';i.onchange=async()=>{const fl=i.files[0];if(fl)await restoreBackup(fl)};i.click()});
+    bg.querySelector('#pd_mg').onclick=go(migrarDesdeSupabase);
+    bg.querySelector('#pd_ls').onclick=go(()=>ofrecerDatosAntiguos(true));
+    bg.querySelector('#pd_del').onclick=go(borrarTodoLocal)}});
+}
+async function borrarTodoLocal(){
+  const c1=await dialogo({titulo:'Borrar todos los datos',html:`<p>Se borrarán <b>todas</b> las fincas, anotaciones, fotos y pruebas de madurez de <b>este dispositivo</b>. No afecta a copias de seguridad ya guardadas.</p><p class="mu">Si no tienes una copia reciente, cancela y haz antes la copia de seguridad.</p>`,ok:'Continuar',peligro:true});
+  if(!c1)return;
+  const c2=await dialogo({titulo:'Confirmación final',html:`<p><b>No se puede deshacer.</b></p>`,ok:'Borrar todo',peligro:true,palabra:'BORRAR',espera:2});
+  if(!c2)return;
+  await LOCAL.chain;
+  LOCAL.mem={fincas:[],anotaciones:[],madurez:[]};LOCAL.fotosMem.clear();
+  if(LOCAL.ok)for(const s of ['fincas','anotaciones','madurez','fotos'])await idbClear(s);
+  for(const k of Object.keys(urlCache)){try{URL.revokeObjectURL(urlCache[k])}catch{}delete urlCache[k]}
+  fincas=[];mads=[];sel.clear();selMode=false;view='list';cur=null;render();toast('Datos de este dispositivo borrados.');
 }
 // ---------- exportar ----------
 const fname=e=>'fincas'+(q?'_'+q.slice(0,40):'')+'.'+e;
@@ -1387,17 +1562,6 @@ async function exportExcel(){
   if(typeof XLSX==='undefined')return toast('Excel necesita conexión la primera vez para cargar la biblioteca.');
   // Exportar solo las fincas del usuario y sus parcelas; una fila por parcela.
   let all=[...fincas];
-  if(navigator.onLine){
-    const r=await sb.from('fincas').select('*').order('finca');
-    if(!r.error)all=r.data||[];
-    else toast('Exportando datos locales; revisa sincronización.');
-  }
-  const pendingById=new Map(pendingSync.map(x=>[x.id,x]));
-  for(const [id,item] of pendingById){
-    const i=all.findIndex(f=>f.id===id);
-    const row={...(i>=0?all[i]:{}),...item.row,id};
-    if(i>=0)all[i]=row;else all.push(row);
-  }
   all=all.filter(f=>coincideBusqueda(f)).sort(cmpFincas);
   const rows=all.flatMap(f=>{
     const parcelas=parcelasDe(f);
